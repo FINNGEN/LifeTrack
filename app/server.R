@@ -393,7 +393,9 @@ server <- function(input, output, session){
     }
   }, ignoreInit = TRUE)
   
-  
+  #
+  # "Hide visited" checkbox
+  #
   
   observeEvent(input$hide_visited, {
     if(input$hide_visited == TRUE){
@@ -735,6 +737,7 @@ server <- function(input, output, session){
     
     # this is an ugly workaround for the ggiraph alpha bug (reported on GitHub 18.4.2023)
     # the ggplot code is duplicated for having/not having a selection
+    # the only difference being where alpha is set (inside/outside of aes)
     GOT_SELECTION <- !is.null(values$df_selected) && nrow(values$df_selected) > 0
     
     if(GOT_SELECTION) {
