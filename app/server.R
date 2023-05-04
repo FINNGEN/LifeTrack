@@ -735,216 +735,100 @@ server <- function(input, output, session){
     log_entry("interval_months", interval_months)
     log_entry("dotsize", dotsize + input$dotsize)
     
-    # this is an ugly workaround for the ggiraph alpha bug (reported on GitHub 18.4.2023)
-    # the ggplot code is duplicated for having/not having a selection
-    # the only difference being where alpha is set (inside/outside of aes)
-    GOT_SELECTION <- !is.null(values$df_selected) && nrow(values$df_selected) > 0
+    # make selected points bright, if no selection then all are bright
+    df_points <- values$df_points |> 
+      mutate(alpha = ifelse(is.null(values$df_selected) | INDEX %in% values$df_selected$INDEX, "bright", "dim"))
     
-    if(GOT_SELECTION) {
-      gg_plot <- ggplot() +
-        geom_dotplot_interactive(
-          data = values$df_points, 
-          binwidth = input$binwidth,
-          method = input$method,
-          dotsize = dotsize + input$dotsize,
-          position = input$position,
-          binaxis = 'y',
-          binpositions = 'all',
-          stackdir = input$stackdir,
-          stackratio = input$stackratio,
-          stackgroups = TRUE,
-          stroke = 0.5,
-          # alpha = 1.0,
-          aes(
-            x = CLASSIFICATION, y = APPROX_EVENT_DAY,
-            alpha = ifelse(is.null(values$df_selected) | INDEX %in% values$df_selected$INDEX, 1.0, 0.75),
-            fill = SOURCE,
-            #      color = "black", # this will cause ring to be gray?
-            tooltip = paste0(APPROX_EVENT_DAY, "\n", 
-                             SOURCE, "\n",
-                             "CODE : ", CODE1, "\n", 
-                             "VOCABULARY : ", vocabulary_id, "\n",
-                             "CAT  : ", CATEGORY, "\n",
-                             "AGE : ", EVENT_AGE, "\n\n",
-                             str_wrap(name_en, 30), "\n\n",
-                             ifelse(name_en != name_en_top & str_length(name_en_top),
-                                    paste("-", str_wrap(name_en_top, 30), "\n\n"), ""),
-                             "- ", X_label, "\n\n",
-                             ifelse(!is.na(provider_name_en) & str_length(provider_name_en), paste(provider_name_en, "\n"), ""),
-                             ifelse(!is.na(visit_type_name_en) & str_length(visit_type_name_en), 
-                                    paste(str_wrap(visit_type_name_en, 30)), "")
-            ),
-            data_id = data_id # paste0(CLASSIFICATION, "---", APPROX_EVENT_DAY)
+    gg_plot <- ggplot() +
+      geom_dotplot_interactive(
+        data = df_points, 
+        binwidth = input$binwidth,
+        method = input$method,
+        dotsize = dotsize + input$dotsize,
+        position = input$position,
+        binaxis = 'y',
+        binpositions = 'all',
+        stackdir = input$stackdir,
+        stackratio = input$stackratio,
+        stackgroups = TRUE,
+        stroke = 0.5,
+        aes(
+          x = CLASSIFICATION, y = APPROX_EVENT_DAY,
+          alpha = alpha,
+          fill = SOURCE,
+          tooltip = paste0(APPROX_EVENT_DAY, "\n", 
+                           SOURCE, "\n",
+                           "CODE : ", CODE1, "\n", 
+                           "VOCABULARY : ", vocabulary_id, "\n",
+                           "CAT  : ", CATEGORY, "\n",
+                           "AGE : ", EVENT_AGE, "\n\n",
+                           str_wrap(name_en, 30), "\n\n",
+                           ifelse(name_en != name_en_top & str_length(name_en_top),
+                                  paste("-", str_wrap(name_en_top, 30), "\n\n"), ""),
+                           "- ", X_label, "\n\n",
+                           ifelse(!is.na(provider_name_en) & str_length(provider_name_en), paste(provider_name_en, "\n"), ""),
+                           ifelse(!is.na(visit_type_name_en) & str_length(visit_type_name_en), 
+                                  paste(str_wrap(visit_type_name_en, 30)), "")
           ),
-          hover_nearest = TRUE) + # requires data_id
-        geom_spoke(
-          data = values$df_register_start,
-          aes(x = CLASSIFICATION, y = START_DATE, angle = 0, radius = 0.4, color = SOURCE), alpha = 0.5
-        ) +
-        geom_spoke(
-          data = values$df_register_start,
-          aes(x = CLASSIFICATION, y = START_DATE, angle = 180, radius = 0.5, color = SOURCE), alpha = 0.5
-        ) +
-        geom_text(data = values$df_labels, 
-                  aes(x = ymax, y = xmin, label = SECTION),
-                  hjust= 0.0, vjust = -1, color = "gray", alpha = 0.5, size = 3,
-                  show.legend = FALSE
-        ) +
-        # {if(!is.null(values$df_selected))
-        #   geom_point(data = values$df_selected,
-        #              aes(x = CLASSIFICATION, y = APPROX_EVENT_DAY),
-        #              fill = NA,
-        #              shape = 6, # downward-pointing triangle
-        #              color = "black",
-        #              size = 1,
-        #              stroke = 0.5,
-        #              position = position_nudge(x = 0.35),
-        #              show.legend = FALSE
-        #   )} +
-        scale_fill_manual(name = "SOURCE", values = register_colors) +
-        scale_color_manual(name = "SOURCE", values = register_colors) +
-        scale_y_date(breaks = "5 years", date_minor_breaks = "1 years", date_labels = "%Y") +
-        scale_x_discrete(labels = str_trunc(levels(values$df_points$X_label), 60), expand = expansion(add = 1.5)) +
-        coord_flip() +
-        theme_light() +
-        theme(
-          text = element_text(family = "sans", face = "plain"), # Helvetica
-          plot.title = element_text(size = 6),
-          legend.key.height = unit(5, "mm"),
-          legend.key.width = unit(7, "mm"),
-          legend.justification = "top",
-          legend.text = element_text(size = 5),
-          legend.title = element_text(size = 6),
-          axis.title.x = element_text(size = 7),
-          axis.text.x = element_text(size = 7),
-          axis.title.y = element_text(size = 7),
-          axis.text.y = element_text(size = 5),
-          panel.grid.minor.y = element_blank(),
-          panel.grid = element_line(linewidth = 0.2)
-        ) +
-        labs(
-          title = paste(
-            person, 
-            values$df_minimum$SEX, 
-            paste0(year(values$df_minimum$APPROX_BIRTH_DATE)),
-            paste0(values$df_minimum$HEIGHT, "cm"), 
-            paste0("smoke:", values$df_minimum$SMOKE2, "/", 
-                   values$df_minimum$SMOKE3, "/", 
-                   values$df_minimum$SMOKE5
-            ), 
-            paste0("offspring: ", values$df_minimum$NUMBER_OF_OFFSPRING),
-            paste0(values$df_minimum$regionofbirthname),
-            paste0("\n", nrow(values$df_all), " entries; period: ", values$date_range[1], " — ", values$date_range[2]),
-            sep = "; "
-          ),
-          x = "", # "CLASS"
-          y = ""  # "DATE"
-        ) +
-        guides(color = "none", alpha = "none")
-    } else {
-      gg_plot <- ggplot() +
-        geom_dotplot_interactive(
-          data = values$df_points, 
-          binwidth = input$binwidth,
-          method = input$method,
-          dotsize = dotsize + input$dotsize,
-          position = input$position,
-          binaxis = 'y',
-          binpositions = 'all',
-          stackdir = input$stackdir,
-          stackratio = input$stackratio,
-          stackgroups = TRUE,
-          stroke = 0.5,
-          alpha = 1.0,
-          aes(
-            x = CLASSIFICATION, y = APPROX_EVENT_DAY,
-            # alpha = ifelse(is.null(values$df_selected) | INDEX %in% values$df_selected$INDEX, 1.0, 0.5),
-            fill = SOURCE,
-            #      color = "black", # this will cause ring to be gray?
-            tooltip = paste0(APPROX_EVENT_DAY, "\n", 
-                             SOURCE, "\n",
-                             "CODE : ", CODE1, "\n", 
-                             "VOCABULARY : ", vocabulary_id, "\n",
-                             "CAT  : ", CATEGORY, "\n",
-                             "AGE : ", EVENT_AGE, "\n\n",
-                             str_wrap(name_en, 30), "\n\n",
-                             ifelse(name_en != name_en_top & str_length(name_en_top),
-                                    paste("-", str_wrap(name_en_top, 30), "\n\n"), ""),
-                             "- ", X_label, "\n\n",
-                             ifelse(!is.na(provider_name_en) & str_length(provider_name_en), paste(provider_name_en, "\n"), ""),
-                             ifelse(!is.na(visit_type_name_en) & str_length(visit_type_name_en), 
-                                    paste(str_wrap(visit_type_name_en, 30)), "")
-            ),
-            data_id = data_id # paste0(CLASSIFICATION, "---", APPROX_EVENT_DAY)
-          ),
-          hover_nearest = TRUE) + # requires data_id
-        geom_spoke(
-          data = values$df_register_start,
-          aes(x = CLASSIFICATION, y = START_DATE, angle = 0, radius = 0.4, color = SOURCE), alpha = 0.5
-        ) +
-        geom_spoke(
-          data = values$df_register_start,
-          aes(x = CLASSIFICATION, y = START_DATE, angle = 180, radius = 0.5, color = SOURCE), alpha = 0.5
-        ) +
-        geom_text(data = values$df_labels, 
-                  aes(x = ymax, y = xmin, label = SECTION),
-                  hjust= 0.0, vjust = -1, color = "gray", alpha = 0.5, size = 3,
-                  show.legend = FALSE
-        ) +
-        {if(!is.null(values$df_selected))
-          geom_point(data = values$df_selected,
-                     aes(x = CLASSIFICATION, y = APPROX_EVENT_DAY),
-                     fill = NA,
-                     shape = 6, # downward-pointing triangle
-                     color = "black",
-                     size = 1,
-                     stroke = 0.5,
-                     position = position_nudge(x = 0.35),
-                     show.legend = FALSE
-          )} +
-        scale_fill_manual(name = "SOURCE", values = register_colors) +
-        scale_color_manual(name = "SOURCE", values = register_colors) +
-        scale_y_date(breaks = "5 years", date_minor_breaks = "1 years", date_labels = "%Y") +
-        scale_x_discrete(labels = str_trunc(levels(values$df_points$X_label), 60), expand = expansion(add = 1.5)) +
-        coord_flip() +
-        theme_light() +
-        theme(
-          text = element_text(family = "sans", face = "plain"), # Helvetica
-          plot.title = element_text(size = 6),
-          legend.key.height = unit(5, "mm"),
-          legend.key.width = unit(7, "mm"),
-          legend.justification = "top",
-          legend.text = element_text(size = 5),
-          legend.title = element_text(size = 6),
-          axis.title.x = element_text(size = 7),
-          axis.text.x = element_text(size = 7),
-          axis.title.y = element_text(size = 7),
-          axis.text.y = element_text(size = 5),
-          panel.grid.minor.y = element_blank(),
-          panel.grid = element_line(linewidth = 0.2)
-        ) +
-        labs(
-          title = paste(
-            person, 
-            values$df_minimum$SEX, 
-            paste0(year(values$df_minimum$APPROX_BIRTH_DATE)),
-            paste0(values$df_minimum$HEIGHT, "cm"), 
-            paste0("smoke:", values$df_minimum$SMOKE2, "/", 
-                   values$df_minimum$SMOKE3, "/", 
-                   values$df_minimum$SMOKE5
-            ), 
-            paste0("offspring: ", values$df_minimum$NUMBER_OF_OFFSPRING),
-            paste0(values$df_minimum$regionofbirthname),
-            paste0("\n", nrow(values$df_all), " entries; period: ", values$date_range[1], " — ", values$date_range[2]),
-            sep = "; "
-          ),
-          x = "", # "CLASS"
-          y = ""  # "DATE"
-        ) +
-        guides(color = "none", alpha = "none")
-    }
+          data_id = data_id # paste0(CLASSIFICATION, "---", APPROX_EVENT_DAY)
+        ),
+        hover_nearest = TRUE) + # requires data_id
+      geom_spoke(
+        data = values$df_register_start,
+        aes(x = CLASSIFICATION, y = START_DATE, angle = 0, radius = 0.4, color = SOURCE), alpha = 0.5
+      ) +
+      geom_spoke(
+        data = values$df_register_start,
+        aes(x = CLASSIFICATION, y = START_DATE, angle = 180, radius = 0.5, color = SOURCE), alpha = 0.5
+      ) +
+      geom_text(data = values$df_labels, 
+                aes(x = ymax, y = xmin, label = SECTION),
+                hjust= 0.0, vjust = -1, color = "gray", alpha = 0.5, size = 3,
+                show.legend = FALSE
+      ) +
+      scale_fill_manual(name = "SOURCE", values = register_colors) +
+      scale_color_manual(name = "SOURCE", values = register_colors) +
+      scale_alpha_manual(values = c("bright" = 1.0, "dim" = 0.2)) +
+      scale_y_date(breaks = "5 years", date_minor_breaks = "1 years", date_labels = "%Y") +
+      scale_x_discrete(labels = str_trunc(levels(values$df_points$X_label), 60), expand = expansion(add = 1.5)) +
+      coord_flip() +
+      theme_light() +
+      theme(
+        text = element_text(family = "sans", face = "plain"), # Helvetica
+        plot.title = element_text(size = 6),
+        legend.key.height = unit(5, "mm"),
+        legend.key.width = unit(7, "mm"),
+        legend.justification = "top",
+        legend.text = element_text(size = 5),
+        legend.title = element_text(size = 6),
+        axis.title.x = element_text(size = 7),
+        axis.text.x = element_text(size = 7),
+        axis.title.y = element_text(size = 7),
+        axis.text.y = element_text(size = 5),
+        panel.grid.minor.y = element_blank(),
+        panel.grid = element_line(linewidth = 0.2)
+      ) +
+      labs(
+        title = paste(
+          person, 
+          values$df_minimum$SEX, 
+          paste0(year(values$df_minimum$APPROX_BIRTH_DATE)),
+          paste0(values$df_minimum$HEIGHT, "cm"), 
+          paste0("smoke:", values$df_minimum$SMOKE2, "/", 
+                 values$df_minimum$SMOKE3, "/", 
+                 values$df_minimum$SMOKE5
+          ), 
+          paste0("offspring: ", values$df_minimum$NUMBER_OF_OFFSPRING),
+          paste0(values$df_minimum$regionofbirthname),
+          paste0("\n", nrow(values$df_all), " entries; period: ", values$date_range[1], " — ", values$date_range[2]),
+          sep = "; "
+        ),
+        x = "", # "CLASS"
+        y = ""  # "DATE"
+      ) +
+      guides(color = "none", alpha = "none")
     
-    girafe(ggobj = gg_plot, 
+    gg_girafe <- girafe(ggobj = gg_plot, 
            height_svg = (12 * input$x_factor) * values$df_height / 44 + 1, 
            width_svg = 6,
            options = list(
@@ -961,6 +845,8 @@ server <- function(input, output, session){
              )
            )
     )
+    log_entry("return SVG object")
+    return(gg_girafe)
   })
   
   # handle window close ####
