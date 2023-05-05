@@ -1,9 +1,7 @@
 #
 # R with tidyverse
 #
-#
 
-# v0.7.6 build
 FROM rocker/r-ver:4.3.0
 ARG REPO='https://packagemanager.rstudio.com/cran/__linux__/jammy/2023-05-03'
 
@@ -57,11 +55,8 @@ RUN R -e "remotes::install_github('FINNGEN/FinnGenUtilsR')"
 # setup user shiny
 RUN useradd -ms /bin/bash shiny
 USER shiny
-WORKDIR "/home/shiny"
-RUN mkdir app
-COPY app/* app/
-#RUN mkdir app/bq_auth
-#COPY bq_auth/ app/bq_auth/
+WORKDIR /home/shiny
+COPY app/ app/
 
 # set up Renviron
 ARG VERSION
