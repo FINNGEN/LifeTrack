@@ -3,10 +3,9 @@
 #
 #
 
-# this works 28.4.2023
-# R 4.3.0
-FROM rocker/r-ver:latest
-ARG REPO='https://packagemanager.rstudio.com/cran/__linux__/jammy/latest'
+# v0.7.6 build
+FROM rocker/r-ver:4.3.0
+ARG REPO='https://packagemanager.rstudio.com/cran/__linux__/jammy/2023-05-03'
 
 LABEL maintainer="harri.siirtola@tuni.fi"
 
@@ -60,9 +59,9 @@ RUN useradd -ms /bin/bash shiny
 USER shiny
 WORKDIR "/home/shiny"
 RUN mkdir app
-COPY app/*.R app/
-RUN mkdir app/bq_auth
-COPY bq_auth/ app/bq_auth/
+COPY app/* app/
+#RUN mkdir app/bq_auth
+#COPY bq_auth/ app/bq_auth/
 
 # set up Renviron
 ARG VERSION
