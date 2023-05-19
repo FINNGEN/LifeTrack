@@ -2,7 +2,7 @@
 # app.R  - LifeTrack
 #
 
-source("ui.R")
-source("server.R")
+source("ui.R", local = TRUE)
+source("server.R", local = TRUE)
 
-shinyApp(ui, server, port = 8559)
+shinyApp(ui = ui, server = server)

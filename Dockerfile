@@ -52,22 +52,19 @@ RUN R -e "install.packages('DT', repos ='$REPO')"
 RUN R -e "install.packages('remotes')"
 RUN R -e "remotes::install_github('FINNGEN/FinnGenUtilsR')"
 
-# setup user shiny
-RUN useradd -ms /bin/bash shiny
-USER shiny
-WORKDIR /home/shiny
-COPY app/ app/
+# run as root
+COPY app/ .
 
 # set up Renviron
 ARG VERSION
-RUN echo 'VERSION='$VERSION >> /home/shiny/.Renviron
+RUN echo 'VERSION='$VERSION >> /root/.Renviron
 
 # run app
-CMD ["R", "-e", "shiny::runApp(appDir = '/home/shiny/app', host = '0.0.0.0', port = 8559)"]
+ENTRYPOINT ["/usr/local/bin/R", "-e", "shiny::runApp('.', host = '0.0.0.0', port = 8559)"]
 
 ## login as root into running container
 #
-# docker exec -u root -t -i lifetrack /bin/bash
+# docker exec -u root -t -i <container-id> /bin/bash
 #
 
 ## Path mapping: -v /path/on/host:/path/inside/container

@@ -28,8 +28,9 @@ log_entry("initializing")
 # what is the environment?
 SANDBOX_PATH <- (path.expand('~') == "/home/ivm")
 BUCKET_SANDBOX_IVM <- Sys.getenv("BUCKET_SANDBOX_IVM") %>% stringr::str_remove("-red$")
-DOCKER_PATH <- (path.expand('~') == "/home/shiny")
+DOCKER_PATH <- (path.expand('~') == "/root")
 
+log_entry("PATH", path.expand('~'))
 log_entry("BUCKET_SANDBOX_IVM", BUCKET_SANDBOX_IVM)
 
 # set the HOST accordingly, four possible environments
