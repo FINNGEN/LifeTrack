@@ -111,6 +111,12 @@ shinyUI(
                     
                     hr(),
                     
+                    div(style = "margin-top: +15px; margin-bottom: -25px; display: flex; ",
+                        checkboxInput("show_prevalence", label = "Highlight rare codes", value = FALSE)
+                    ),
+                    
+                    hr(),
+                    
                     div(style = "margin-top: -20px; margin-left:20px; margin-right:20px;",
                         sliderInput("selection_extension",
                                     "Click extension (months +/-)", 
