@@ -111,10 +111,22 @@ shinyUI(
                     
                     hr(),
                     
-                    div(style = "margin-top: +15px; margin-bottom: -25px; display: flex; ",
-                        checkboxInput("show_prevalence", label = "Highlight rare codes", value = FALSE)
+                    div(style = "margin-top: -20px; margin-left:20px; margin-right:20px;",
+                        sliderInput("prevalence",
+                                    "Prevalence (less or equal)", 
+                                    min = 0.0,
+                                    max = 100.0,
+                                    value = 100.0,
+                                    step = 0.1,
+                                    post = "%",
+                                    round = -1
+                        ),
+                        div(style = "margin-top:-5px; margin-bottom: -0px; display: flex; ",
+                            div(actionButton("show_prevalence", "Show prevalence")),
+                            div(actionButton("reset_prevalence", "Reset")),
+                        )
                     ),
-                    
+
                     hr(),
                     
                     div(style = "margin-top: -20px; margin-left:20px; margin-right:20px;",

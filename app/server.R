@@ -304,27 +304,6 @@ build_plot_values <- function(df_all, values){
   values$df_points <- df_points
 }
 
-#
-# get_point_prevalence
-#
-
-get_point_prevalence <- function(point_concept_id, point_sex, point_year_of_birth, point_age_decile){
-  
-  df_point_prevalence <- df_prevalence |> 
-    filter(
-      source_concept_id == point_concept_id &
-        sex == point_sex &
-        year_of_birth == point_year_of_birth &
-        age_decile == floor(point_age_decile/10) * 10
-    )
-  if(nrow(df_point_prevalence) == 0)
-    return(0)
-  else {
-    message("got value")
-    return(df_point_prevalence$n_persons_with_code / df_point_prevalence$n_persons_in_observation)
-  }
-}
-
 # event handling ####
 
 server <- function(input, output, session){
@@ -333,7 +312,7 @@ server <- function(input, output, session){
   cohort <- NULL
   cohort_saved <- NULL
   person <- ""
-  
+
   # reactive data
   values <- reactiveValues(
     df_all = NULL,
@@ -612,11 +591,11 @@ server <- function(input, output, session){
       by = c("omop_concept_id_code5", "age_decile", "SEX", "year_of_birth")
     )
     
-    # mutate prevalence to 0..1, missing data coded 0
+    # mutate prevalence to 0..1, missing data coded 1
     df_all <- df_all |> 
       mutate(prevalence = case_when(
-        !is.na(n_persons_with_code) & !is.na(n_persons_in_observation) ~ 1.0 - (n_persons_with_code / n_persons_in_observation),
-        TRUE ~ 0
+        !is.na(n_persons_with_code) & !is.na(n_persons_in_observation) ~ (n_persons_with_code / n_persons_in_observation),
+        TRUE ~ 1.0
       ))
     
     build_plot_values(df_all, values)
@@ -710,22 +689,70 @@ server <- function(input, output, session){
       }
     }
     
+    updateSliderInput(session, "prevalence", value = 100.0)
+    
   }, ignoreInit = TRUE)
   
   #
-  # reset_filter
+  # reset_filter ####
   #
   
   observeEvent(input$reset_filter, {
-
+    
     log_entry("filter reset")
     
     updateTextInput(session, "entry_regexp", value = "")
     updateTextInput(session, "class_regexp", value = "")
     updateSliderInput(session, "date_range", value = values$date_range)
+    updateSliderInput(session, "prevalence", value = 100.0)
     
     if(is.null(values$df_all)) return()
-        
+    
+    build_plot_values(values$df_all, values)
+    
+    values$df_selected <- NULL
+    shinyjs::runjs("window.scrollTo(0, 0)")
+    
+  }, ignoreInit = TRUE)
+  
+  #
+  # show_prevalence ####
+  #
+  
+  observeEvent(input$show_prevalence, {
+    
+    log_entry("show prevalence")
+    shinyjs::runjs("window.scrollTo(0, 0)")
+    
+    updateTextInput(session, "entry_regexp", value = "")
+    updateTextInput(session, "class_regexp", value = "")
+
+    if(is.null(values$df_all)) return()
+    
+    log_entry("selection on prevalence")
+    df_selected <- values$df_points |> 
+      filter(prevalence <= input$prevalence / 100)
+    
+    # warn if none was found
+    if(nrow(df_selected) == 0){
+      showModalProgress(
+        paste0("No entries with prevalence ", paste0(input$prevalence, "%"), " or less found!"))
+    }
+    
+    values$df_selected <- df_selected
+
+  }, ignoreInit = TRUE)
+  
+  #
+  # reset_prevalence ####
+  #
+  
+  observeEvent(input$reset_prevalence, {
+    log_entry("reset prevalence")
+    
+    df_selected <- NULL
+    updateSliderInput(session, "prevalence", value = 100.0)
+    
     build_plot_values(values$df_all, values)
     
     values$df_selected <- NULL
@@ -801,19 +828,11 @@ server <- function(input, output, session){
     log_entry("interval_months", interval_months)
     log_entry("dotsize", dotsize + input$dotsize)
     
-    # set1 <- values$df_points$omop_concept_id_code5
-    # set2 <- df_prevalence$source_concept_id
-    # set_intersect <- intersect(set1, set2)
-    
-    if(input$show_prevalence){
-      df_points <- values$df_points |> 
-        mutate(alpha = prevalence)
-    } else {
     # make selected points bright, if no selection then all are bright
+    # selection can originate from regex or prevalence
     df_points <- values$df_points |> 
       mutate(alpha = ifelse(is.null(values$df_selected) | INDEX %in% values$df_selected$INDEX, "bright", "dim"))
-    }
-
+    
     gg_plot <- ggplot() +
       geom_dotplot_interactive(
         data = df_points, 
@@ -835,7 +854,7 @@ server <- function(input, output, session){
                            SOURCE, "\n",
                            "CODE : ", CODE1, "\n", 
                            "VOCABULARY : ", vocabulary_id, "\n",
-                           "PREVALENCE : ", round((1 - prevalence) * 100, 2), "%\n",
+                           "PREVALENCE : ", round(prevalence * 100, 2), "%\n",
                            "CAT  : ", CATEGORY, "\n",
                            "AGE : ", EVENT_AGE, "\n\n",
                            str_wrap(name_en, 30), "\n\n",
@@ -864,9 +883,7 @@ server <- function(input, output, session){
       ) +
       scale_fill_manual(name = "SOURCE", values = register_colors) +
       scale_color_manual(name = "SOURCE", values = register_colors) +
-      {if(!input$show_prevalence)
-        scale_alpha_manual(values = c("bright" = 1.0, "dim" = 0.2))
-      } +
+      scale_alpha_manual(values = c("bright" = 1.0, "dim" = 0.2)) +
       scale_y_date(breaks = "5 years", date_minor_breaks = "1 years", date_labels = "%Y") +
       scale_x_discrete(labels = str_trunc(levels(values$df_points$X_label), 60), expand = expansion(add = 1.5)) +
       coord_flip() +
@@ -924,6 +941,7 @@ server <- function(input, output, session){
            )
     )
     log_entry("return SVG object")
+    show_prevalence <<- FALSE
     return(gg_girafe)
   })
   
