@@ -689,7 +689,7 @@ server <- function(input, output, session){
       }
     }
     
-    updateSliderInput(session, "prevalence", value = 100.0)
+    updateSliderInput(session, "prevalence", value = c(0.0, 100.0))
     
   }, ignoreInit = TRUE)
   
@@ -704,7 +704,7 @@ server <- function(input, output, session){
     updateTextInput(session, "entry_regexp", value = "")
     updateTextInput(session, "class_regexp", value = "")
     updateSliderInput(session, "date_range", value = values$date_range)
-    updateSliderInput(session, "prevalence", value = 100.0)
+    updateSliderInput(session, "prevalence", value = c(0, 100.0))
     
     if(is.null(values$df_all)) return()
     
@@ -730,13 +730,15 @@ server <- function(input, output, session){
     if(is.null(values$df_all)) return()
     
     log_entry("selection on prevalence")
+    prevalence_limits <- input$prevalence / 100
     df_selected <- values$df_points |> 
-      filter(prevalence <= input$prevalence / 100)
+      filter(prevalence_limits[1] <= prevalence & prevalence <= prevalence_limits[2])
     
     # warn if none was found
     if(nrow(df_selected) == 0){
       showModalProgress(
-        paste0("No entries with prevalence ", paste0(input$prevalence, "%"), " or less found!"))
+        paste0("No entries with prevalence ", 
+               paste0(prevalence_limits[1] * 100, "% - "), prevalence_limits[2] * 100, "%"))
     }
     
     values$df_selected <- df_selected
@@ -751,7 +753,7 @@ server <- function(input, output, session){
     log_entry("reset prevalence")
     
     df_selected <- NULL
-    updateSliderInput(session, "prevalence", value = 100.0)
+    updateSliderInput(session, "prevalence", value = c(0.0, 100.0))
     
     build_plot_values(values$df_all, values)
     

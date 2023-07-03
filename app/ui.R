@@ -113,10 +113,10 @@ shinyUI(
                     
                     div(style = "margin-top: -20px; margin-left:20px; margin-right:20px;",
                         sliderInput("prevalence",
-                                    "Prevalence (less or equal)", 
+                                    "Prevalence", 
                                     min = 0.0,
                                     max = 100.0,
-                                    value = 100.0,
+                                    value = c(0.0, 100.0),
                                     step = 0.1,
                                     post = "%",
                                     round = -1
