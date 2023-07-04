@@ -773,8 +773,8 @@ server <- function(input, output, session){
     # get selected points from girafe
     selected_rows <- input$mainplot_selected
     
-    # if one of the highlighted values is selected, extend to all of them
-    if(!is.null(values$df_selected) && selected_rows %in% values$df_selected$INDEX){ 
+    # if any of the highlighted values are in selected, extend to all of them
+    if(!is.null(values$df_selected) && any(selected_rows %in% values$df_selected$INDEX)){ 
       selected_rows <- values$df_selected$INDEX
     }
     
@@ -804,7 +804,7 @@ server <- function(input, output, session){
         DT::renderDataTable({ DT::datatable(df_lasso) }),
         size = "l",
         easyClose = FALSE,
-        title = "Entries",
+        title = paste0("Entries (", nrow(df_lasso), ")"),
         footer = modalButton("Close"),
         options = list(
           autowidth = TRUE
@@ -943,7 +943,6 @@ server <- function(input, output, session){
            )
     )
     log_entry("return SVG object")
-    show_prevalence <<- FALSE
     return(gg_girafe)
   })
   

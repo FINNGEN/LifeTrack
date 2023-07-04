@@ -105,8 +105,8 @@ shinyUI(
                         textInput("entry_regexp", "Entry highlight filter (regex)", value = "")
                     ),
                     div(style = "margin-top:-5px; margin-bottom: -0px; display: flex; ",
-                        div(actionButton("filter_data", "Filter data")),
-                        div(actionButton("reset_filter", "Reset filters"))
+                        div(actionButton("filter_data", "Filter")),
+                        div(actionButton("reset_filter", "Reset"))
                     ),
                     
                     hr(),
@@ -122,7 +122,7 @@ shinyUI(
                                     round = -1
                         ),
                         div(style = "margin-top:-5px; margin-bottom: -0px; display: flex; ",
-                            div(actionButton("show_prevalence", "Show prevalence")),
+                            div(actionButton("show_prevalence", "Show")),
                             div(actionButton("reset_prevalence", "Reset")),
                         )
                     ),
