@@ -595,7 +595,7 @@ server <- function(input, output, session){
     df_all <- df_all |> 
       mutate(prevalence = case_when(
         !is.na(n_persons_with_code) & !is.na(n_persons_in_observation) ~ (n_persons_with_code / n_persons_in_observation),
-        TRUE ~ 1.0
+        TRUE ~ 0.99
       ))
     
     build_plot_values(df_all, values)
@@ -719,48 +719,48 @@ server <- function(input, output, session){
   # show_prevalence ####
   #
   
-  observeEvent(input$show_prevalence, {
-    
-    log_entry("show prevalence")
-    shinyjs::runjs("window.scrollTo(0, 0)")
-    
-    updateTextInput(session, "entry_regexp", value = "")
-    updateTextInput(session, "class_regexp", value = "")
-
-    if(is.null(values$df_all)) return()
-    
-    log_entry("selection on prevalence")
-    prevalence_limits <- input$prevalence / 100
-    df_selected <- values$df_points |> 
-      filter(prevalence_limits[1] <= prevalence & prevalence <= prevalence_limits[2])
-    
-    # warn if none was found
-    if(nrow(df_selected) == 0){
-      showModalProgress(
-        paste0("No entries with prevalence ", 
-               paste0(prevalence_limits[1] * 100, "% - "), prevalence_limits[2] * 100, "%"))
-    }
-    
-    values$df_selected <- df_selected
-
-  }, ignoreInit = TRUE)
-  
-  #
-  # reset_prevalence ####
-  #
-  
-  observeEvent(input$reset_prevalence, {
-    log_entry("reset prevalence")
-    
-    df_selected <- NULL
-    updateSliderInput(session, "prevalence", value = c(0.0, 100.0))
-    
-    build_plot_values(values$df_all, values)
-    
-    values$df_selected <- NULL
-    shinyjs::runjs("window.scrollTo(0, 0)")
-    
-  }, ignoreInit = TRUE)
+  # observeEvent(input$show_prevalence, {
+  #   
+  #   log_entry("show prevalence")
+  #   shinyjs::runjs("window.scrollTo(0, 0)")
+  #   
+  #   updateTextInput(session, "entry_regexp", value = "")
+  #   updateTextInput(session, "class_regexp", value = "")
+  # 
+  #   if(is.null(values$df_all)) return()
+  #   
+  #   log_entry("selection on prevalence")
+  #   prevalence_limits <- input$prevalence / 100
+  #   df_selected <- values$df_points |> 
+  #     filter(prevalence_limits[1] <= prevalence & prevalence <= prevalence_limits[2])
+  #   
+  #   # warn if none was found
+  #   if(nrow(df_selected) == 0){
+  #     showModalProgress(
+  #       paste0("No entries with prevalence ", 
+  #              paste0(prevalence_limits[1] * 100, "% - "), prevalence_limits[2] * 100, "%"))
+  #   }
+  #   
+  #   values$df_selected <- df_selected
+  # 
+  # }, ignoreInit = TRUE)
+  # 
+  # #
+  # # reset_prevalence ####
+  # #
+  # 
+  # observeEvent(input$reset_prevalence, {
+  #   log_entry("reset prevalence")
+  #   
+  #   df_selected <- NULL
+  #   updateSliderInput(session, "prevalence", value = c(0.0, 100.0))
+  #   
+  #   build_plot_values(values$df_all, values)
+  #   
+  #   values$df_selected <- NULL
+  #   shinyjs::runjs("window.scrollTo(0, 0)")
+  #   
+  # }, ignoreInit = TRUE)
   
   #
   # selection handling ####
@@ -833,7 +833,11 @@ server <- function(input, output, session){
     # make selected points bright, if no selection then all are bright
     # selection can originate from regex or prevalence
     df_points <- values$df_points |> 
-      mutate(alpha = ifelse(is.null(values$df_selected) | INDEX %in% values$df_selected$INDEX, "bright", "dim"))
+      mutate(alpha = ifelse(is.null(values$df_selected) | INDEX %in% values$df_selected$INDEX, "bright", "dim")) |> 
+      rowwise() |> 
+      mutate(stroke = ifelse(input$prevalence, 5 * (1.0 - prevalence), 0.5))
+    
+    # browser()
     
     gg_plot <- ggplot() +
       geom_dotplot_interactive(
@@ -847,10 +851,11 @@ server <- function(input, output, session){
         stackdir = input$stackdir,
         stackratio = input$stackratio,
         stackgroups = TRUE,
-        stroke = 0.5,
+  #      stroke = 0.5,
         aes(
           x = CLASSIFICATION, y = APPROX_EVENT_DAY,
           alpha = alpha,
+          stroke = stroke,
           fill = SOURCE,
           tooltip = paste0(APPROX_EVENT_DAY, "\n", 
                            SOURCE, "\n",
