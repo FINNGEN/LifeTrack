@@ -689,7 +689,7 @@ server <- function(input, output, session){
       }
     }
     
-    updateSliderInput(session, "prevalence", value = c(0.0, 100.0))
+    # updateSliderInput(session, "prevalence", value = c(0.0, 100.0))
     
   }, ignoreInit = TRUE)
   
@@ -704,7 +704,7 @@ server <- function(input, output, session){
     updateTextInput(session, "entry_regexp", value = "")
     updateTextInput(session, "class_regexp", value = "")
     updateSliderInput(session, "date_range", value = values$date_range)
-    updateSliderInput(session, "prevalence", value = c(0, 100.0))
+    # updateSliderInput(session, "prevalence", value = c(0, 100.0))
     
     if(is.null(values$df_all)) return()
     
@@ -857,6 +857,7 @@ server <- function(input, output, session){
           alpha = alpha,
           stroke = stroke,
           fill = SOURCE,
+     #     color = "black",
           tooltip = paste0(APPROX_EVENT_DAY, "\n", 
                            SOURCE, "\n",
                            "CODE : ", CODE1, "\n", 
