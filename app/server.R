@@ -595,7 +595,7 @@ server <- function(input, output, session){
     df_all <- df_all |> 
       mutate(prevalence = case_when(
         !is.na(n_persons_with_code) & !is.na(n_persons_in_observation) ~ (n_persons_with_code / n_persons_in_observation),
-        TRUE ~ 0.99
+        TRUE ~ 1.0
       ))
     
     build_plot_values(df_all, values)
@@ -835,8 +835,8 @@ server <- function(input, output, session){
     df_points <- values$df_points |> 
       mutate(alpha = ifelse(is.null(values$df_selected) | INDEX %in% values$df_selected$INDEX, "bright", "dim")) |> 
       rowwise() |> 
-      mutate(stroke = ifelse(input$prevalence, 5 * (1.0 - prevalence), 0.5))
-    
+      mutate(stroke = ifelse(input$prevalence, 0.5 + 3 * (1.0 - prevalence), 0.5)) 
+      
     # browser()
     
     gg_plot <- ggplot() +
@@ -852,12 +852,13 @@ server <- function(input, output, session){
         stackratio = input$stackratio,
         stackgroups = TRUE,
   #      stroke = 0.5,
+        color = "lightgray",
         aes(
           x = CLASSIFICATION, y = APPROX_EVENT_DAY,
           alpha = alpha,
           stroke = stroke,
           fill = SOURCE,
-     #     color = "black",
+          # color = SOURCE,
           tooltip = paste0(APPROX_EVENT_DAY, "\n", 
                            SOURCE, "\n",
                            "CODE : ", CODE1, "\n", 
