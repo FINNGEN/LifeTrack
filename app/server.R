@@ -564,7 +564,7 @@ server <- function(input, output, session){
     df_all <- left_join(df_all, select(df_register_spans, SOURCE, COLOR), by = "SOURCE")
     
     #
-    # get code prevalences
+    # get code prevalences ####
     #
     # - download only the omop codes the person has
     #
@@ -718,7 +718,15 @@ server <- function(input, output, session){
   }, ignoreInit = TRUE)
   
   #
-  # show_prevalence ####
+  # prevalence ####
+  #
+  
+  observeEvent(input$prevalence, {
+    shinyjs::runjs("window.scrollTo(0, 0)")
+  }, ignoreInit = TRUE)
+  
+  #
+  # show_prevalence 
   #
   
   # observeEvent(input$show_prevalence, {
@@ -765,7 +773,7 @@ server <- function(input, output, session){
   # }, ignoreInit = TRUE)
   
   #
-  # selection handling ####
+  # selection to table ####
   #
   
   observeEvent(input$mainplot_selected, {
@@ -783,9 +791,15 @@ server <- function(input, output, session){
     # get the data for the selected INDEX values
     df_lasso <- values$df_points |> 
       filter(data_id %in% selected_rows) |> 
-      select(SOURCE, APPROX_EVENT_DAY, CODE1, name_en, visit_type_name_en) |>
-      rename(EVENT_DATE = APPROX_EVENT_DAY, TRANSLATION = name_en, SERVICE_SECTOR = visit_type_name_en) |>
-      select(SERVICE_SECTOR, EVENT_DATE, CODE1, TRANSLATION)
+      select(SOURCE, APPROX_EVENT_DAY, CODE1, name_en, prevalence, visit_type_name_en) |>
+      rename(
+        EVENT_DATE = APPROX_EVENT_DAY, 
+        TRANSLATION = name_en, 
+        PREV = prevalence,
+        SERVICE_SECTOR = visit_type_name_en
+      ) |>
+      mutate(PREV = round(100 * PREV,1)) |> 
+      select(SERVICE_SECTOR, EVENT_DATE, CODE1, PREV, TRANSLATION)
     
     # if only one DATE_DATE is selected -> extend selection
     # by input$selection_extension
@@ -795,15 +809,32 @@ server <- function(input, output, session){
       selection_start <- event_date - months(extension)
       selection_end <- event_date + months(extension)
       df_lasso <- values$df_points |> 
-        select(SOURCE, APPROX_EVENT_DAY, CODE1, name_en, visit_type_name_en) |>
-        rename(EVENT_DATE = APPROX_EVENT_DAY, TRANSLATION = name_en, SERVICE_SECTOR = visit_type_name_en) |> 
+        select(SOURCE, APPROX_EVENT_DAY, CODE1, name_en, prevalence, visit_type_name_en) |>
+        rename(
+          EVENT_DATE = APPROX_EVENT_DAY, 
+          TRANSLATION = name_en, 
+          PREV = prevalence,
+          SERVICE_SECTOR = visit_type_name_en
+        ) |> 
+        mutate(PREV = round(100 * PREV,1)) |> 
         filter(EVENT_DATE >= selection_start & EVENT_DATE <= selection_end ) |> 
-        select(SERVICE_SECTOR, EVENT_DATE, CODE1, TRANSLATION)
+        select(SERVICE_SECTOR, EVENT_DATE, CODE1, PREV, TRANSLATION)
     }
     
     showModal(
       modalDialog(
-        DT::renderDataTable({ DT::datatable(df_lasso) }),
+        DT::renderDataTable({ 
+          DT::datatable(
+            df_lasso,
+            colnames = c(
+              'Event date' = 'EVENT_DATE',
+              'Code' = 'CODE1',
+              'Translation' = 'TRANSLATION',
+              'Prev.%' = 'PREV',
+              'Service sector' = 'SERVICE_SECTOR'
+            )
+          )
+        }),
         size = "l",
         easyClose = FALSE,
         title = paste0("Entries (", nrow(df_lasso), ")"),
