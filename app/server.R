@@ -108,7 +108,9 @@ switch(HOST,
          fg_codes_info_table <-
            "finngen-production-library.medical_codes.fg_codes_info_v2"
          code_prevalence_table <- 
-           "finngen-production-library.sandbox_tools_r11.code_prevalence_stratified_v1"
+           # "finngen-production-library.sandbox_tools_r11.code_prevalence_stratified_v1"
+           "fg-production-sandbox-6.sandbox.code_prevalence_stratified_v1"
+         
        },
        {
          stop("unknown HOST")
