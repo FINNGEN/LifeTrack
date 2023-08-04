@@ -108,8 +108,8 @@ switch(HOST,
          fg_codes_info_table <-
            "finngen-production-library.medical_codes.fg_codes_info_v2"
          code_prevalence_table <- 
-           # "finngen-production-library.sandbox_tools_r11.code_prevalence_stratified_v1"
-           "fg-production-sandbox-6.sandbox.code_prevalence_stratified_v1"
+           "finngen-production-library.sandbox_tools_r11.code_prevalence_stratified_v1"
+           # "fg-production-sandbox-6.sandbox.code_prevalence_stratified_v1"
          
        },
        {
@@ -788,38 +788,34 @@ server <- function(input, output, session){
       selected_rows <- values$df_selected$INDEX
     }
     
-    # get the data for the selected INDEX values
     df_lasso <- values$df_points |> 
-      filter(data_id %in% selected_rows) |> 
-      select(SOURCE, APPROX_EVENT_DAY, CODE1, name_en, prevalence, visit_type_name_en) |>
-      rename(
-        EVENT_DATE = APPROX_EVENT_DAY, 
-        TRANSLATION = name_en, 
-        PREV = prevalence,
-        SERVICE_SECTOR = visit_type_name_en
-      ) |>
-      mutate(PREV = round(100 * PREV,1)) |> 
-      select(SERVICE_SECTOR, EVENT_DATE, CODE1, PREV, TRANSLATION)
-    
-    # if only one DATE_DATE is selected -> extend selection
-    # by input$selection_extension
-    if(length(unique(df_lasso$EVENT_DATE)) == 1){
-      event_date <- first(df_lasso$EVENT_DATE)
+      filter(data_id %in% selected_rows) 
+      
+    # if only one date is selected -> extend selection
+    # by +/- input$selection_extension
+    if(length(unique(df_lasso$APPROX_EVENT_DAY)) == 1){
+      event_date <- first(df_lasso$APPROX_EVENT_DAY)
       extension <- isolate(input$selection_extension)
       selection_start <- event_date - months(extension)
       selection_end <- event_date + months(extension)
-      df_lasso <- values$df_points |> 
-        select(SOURCE, APPROX_EVENT_DAY, CODE1, name_en, prevalence, visit_type_name_en) |>
-        rename(
-          EVENT_DATE = APPROX_EVENT_DAY, 
-          TRANSLATION = name_en, 
-          PREV = prevalence,
-          SERVICE_SECTOR = visit_type_name_en
-        ) |> 
-        mutate(PREV = round(100 * PREV,1)) |> 
-        filter(EVENT_DATE >= selection_start & EVENT_DATE <= selection_end ) |> 
-        select(SERVICE_SECTOR, EVENT_DATE, CODE1, PREV, TRANSLATION)
+      selected_points <- values$df_points |> 
+        filter(APPROX_EVENT_DAY >= selection_start & APPROX_EVENT_DAY <= selection_end )
+    } else {
+      selected_points <- values$df_points |> 
+        filter(data_id %in% selected_rows)
     }
+    
+    df_lasso <- df_lasso |> 
+      mutate(prevalence = round(100 * prevalence,1)) |> 
+      select(
+        visit_type_name_en, 
+        APPROX_EVENT_DAY, 
+        CODE1, 
+        prevalence, 
+        n_persons_with_code, 
+        n_persons_in_observation, 
+        name_en
+      )
     
     showModal(
       modalDialog(
@@ -827,11 +823,13 @@ server <- function(input, output, session){
           DT::datatable(
             df_lasso,
             colnames = c(
-              'Event date' = 'EVENT_DATE',
+              'Event date' = 'APPROX_EVENT_DAY',
               'Code' = 'CODE1',
-              'Translation' = 'TRANSLATION',
-              'Prev.%' = 'PREV',
-              'Service sector' = 'SERVICE_SECTOR'
+              'Translation' = 'name_en',
+              'Prev.%' = 'prevalence',
+              'Code#' = 'n_persons_with_code',
+              'Obs#' = 'n_persons_in_observation',
+              'Service sector' = 'visit_type_name_en'
             )
           )
         }),
