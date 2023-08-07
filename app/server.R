@@ -258,10 +258,9 @@ build_plot_values <- function(df_all, values){
     mutate(y_order = row_number()) |> 
     mutate(CLASSIFICATION = fct_reorder(CLASSIFICATION, y_order)) |> 
     mutate(X_label = fct_reorder(str_wrap(CLASSIFICATION, 30), y_order)) |> 
-    mutate(data_id = as.numeric(INDEX))
-
-  df_points <- df_points |> 
-    mutate(data_id = replace_na(data_id, max(data_id, na.rm = TRUE) + 1)) |> 
+    mutate_at(c('INDEX'), ~replace_na(., '0')) |> 
+    mutate(data_id = as.numeric(INDEX)) |> 
+    mutate(data_id = ifelse(data_id == 0, max(data_id) + 1, data_id)) |> 
     mutate(data_id = as.character(data_id))
 
   df_points <- df_points |>
