@@ -114,8 +114,8 @@ switch(HOST,
          fg_codes_info_table <-
            "finngen-production-library.medical_codes.fg_codes_info_v2"
          code_prevalence_table <- 
-           "finngen-production-library.sandbox_tools_r11.code_prevalence_stratified_v1"
-           # "fg-production-sandbox-6.sandbox.code_prevalence_stratified_v1"
+          # "finngen-production-library.sandbox_tools_r11.code_prevalence_stratified_v1"
+            "fg-production-sandbox-6.sandbox.code_prevalence_stratified_v1"
          birth_table <- 
            "finngen-production-library.sandbox_tools_r11.birth_mother_r11_v1"
        },
@@ -261,7 +261,8 @@ build_plot_values <- function(df_all, values){
     mutate(data_id = as.numeric(INDEX))
 
   df_points <- df_points |> 
-    mutate(data_id = replace_na(data_id, max(data_id, na.rm = TRUE) + 1))
+    mutate(data_id = replace_na(data_id, max(data_id, na.rm = TRUE) + 1)) |> 
+    mutate(data_id = as.character(data_id))
 
   df_points <- df_points |>
     mutate_at(c('name_en','name_en_top'), ~replace_na(.,"")) |> 
