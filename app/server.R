@@ -258,11 +258,11 @@ build_plot_values <- function(df_all, values){
     mutate(y_order = row_number()) |> 
     mutate(CLASSIFICATION = fct_reorder(CLASSIFICATION, y_order)) |> 
     mutate(X_label = fct_reorder(str_wrap(CLASSIFICATION, 30), y_order)) |> 
-    mutate_at(c('INDEX'), ~replace_na(., '0')) |> 
-    mutate(data_id = as.numeric(INDEX)) |> 
-    mutate(data_id = ifelse(data_id == 0, max(data_id) + 1, data_id)) |> 
-    mutate(data_id = as.character(data_id))
-
+    mutate(data_id = case_when(
+      is.na(INDEX) | INDEX == '' ~ paste0(row_number(), '_BIRTH'),
+      TRUE ~ INDEX
+    ))
+  
   df_points <- df_points |>
     mutate_at(c('name_en','name_en_top'), ~replace_na(.,"")) |> 
     mutate_at(c('provider_name_en','visit_type_name_en'), ~replace_na(.,"")) 
