@@ -79,6 +79,8 @@ switch(HOST,
            "atlas-development-270609.medical_codes.fg_codes_info_v2"
          code_prevalence_table <- 
            "atlas-development-270609.sandbox_tools_r11.code_prevalence_stratified_v1"
+         birth_table <- 
+           "atlas-development-270609.sandbox_tools_r11.birth_mother_r11_v1"
        },
        'SANDBOX' = {
          # RStudio sanitizes BUCKET_SANDBOX_IVM away, must be hard-coded
@@ -93,6 +95,8 @@ switch(HOST,
            "finngen-production-library.medical_codes.fg_codes_info_v2"
          code_prevalence_table <- 
            "finngen-production-library.sandbox_tools_r11.code_prevalence_stratified_v1"
+         birth_table <- 
+           "finngen-production-library.sandbox_tools_r11.birth_mother_r11_v1"
          options(gargle_oauth_cache = FALSE)
          bq_auth(scopes = "https://www.googleapis.com/auth/bigquery")
        },
@@ -112,7 +116,8 @@ switch(HOST,
          code_prevalence_table <- 
            "finngen-production-library.sandbox_tools_r11.code_prevalence_stratified_v1"
            # "fg-production-sandbox-6.sandbox.code_prevalence_stratified_v1"
-         
+         birth_table <- 
+           "finngen-production-library.sandbox_tools_r11.birth_mother_r11_v1"
        },
        {
          stop("unknown HOST")
@@ -928,8 +933,7 @@ server <- function(input, output, session){
         stackdir = input$stackdir,
         stackratio = input$stackratio,
         stackgroups = TRUE,
-  #      stroke = 0.5,
-        color = "lightgray",
+        color = "#d8d8d8",
         aes(
           x = CLASSIFICATION, y = APPROX_EVENT_DAY,
           alpha = alpha,
