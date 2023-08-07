@@ -646,7 +646,7 @@ server <- function(input, output, session){
     df_all <- df_all |> 
       mutate(prevalence = case_when(
         !is.na(n_persons_with_code) & !is.na(n_persons_in_observation) ~ (n_persons_with_code / n_persons_in_observation),
-        TRUE ~ 1.0
+        TRUE ~ NA
       ))
     
     # build the points
@@ -917,7 +917,7 @@ server <- function(input, output, session){
     df_points <- values$df_points |> 
       mutate(alpha = ifelse(is.null(values$df_selected) | INDEX %in% values$df_selected$INDEX, "bright", "dim")) |> 
       rowwise() |> 
-      mutate(stroke = ifelse(input$prevalence, 0.5 + 3 * (1.0 - prevalence), 0.5))
+      mutate(stroke = ifelse(input$prevalence & !is.na(prevalence), 0.5 + 3 * (1.0 - prevalence), 0.5))
       
     # browser()
     
@@ -944,7 +944,8 @@ server <- function(input, output, session){
                            SOURCE, "\n",
                            "CODE : ", CODE1, "\n",
                            "VOCABULARY : ", vocabulary_id, "\n",
-                           "PREVALENCE : ", round(prevalence * 100, 2), "%\n",
+                           "PREVALENCE : ", ifelse(is.na(prevalence), NA, round(prevalence * 100, 2)), "%\n",
+                           "PREV.RATIO : ", n_persons_with_code, "/", n_persons_in_observation, "\n",
                            "CAT  : ", CATEGORY, "\n",
                            "AGE : ", EVENT_AGE, "\n\n",
                            str_wrap(name_en, 30), "\n\n",
