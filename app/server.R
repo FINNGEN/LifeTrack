@@ -27,7 +27,9 @@ log_entry("initializing")
 
 # what is the environment?
 SANDBOX_PATH <- (path.expand('~') == "/home/ivm")
-BUCKET_SANDBOX_IVM <- Sys.getenv("BUCKET_SANDBOX_IVM") %>% stringr::str_remove("-red$")
+BUCKET_SANDBOX_IVM <- Sys.getenv("BUCKET_SANDBOX_IVM") |> 
+  stringr::str_remove("-red$") |> 
+  stringr::str_remove("_ivm$")
 DOCKER_PATH <- (path.expand('~') == "/root")
 
 log_entry("PATH", path.expand('~'))
@@ -57,9 +59,10 @@ switch(HOST,
          minimum_data_table <-
            "atlas-development-270609.sandbox_tools_r11.finngenid_info_r11_v1"
          fg_codes_info_table <-
-           "atlas-development-270609.medical_codes.fg_codes_info_v2"
+           "atlas-development-270609.medical_codes.fg_codes_info_v5"
          code_prevalence_table <- 
            "atlas-development-270609.sandbox_tools_r11.code_prevalence_stratified_v1"
+         # "atlas-development-270609.sandbox_tools_r11.code_prevalence_stratified_r11_v1"
          birth_table <- 
            "atlas-development-270609.sandbox_tools_r11.birth_mother_r11_v1"
        },
@@ -76,7 +79,7 @@ switch(HOST,
          minimum_data_table <-
            "atlas-development-270609.sandbox_tools_r11.finngenid_info_r11_v1"
          fg_codes_info_table <-
-           "atlas-development-270609.medical_codes.fg_codes_info_v2"
+           "atlas-development-270609.medical_codes.fg_codes_info_v5"
          code_prevalence_table <- 
            "atlas-development-270609.sandbox_tools_r11.code_prevalence_stratified_v1"
          birth_table <- 
@@ -92,9 +95,9 @@ switch(HOST,
          minimum_data_table <-
            "finngen-production-library.sandbox_tools_r11.finngenid_info_r11_v1"
          fg_codes_info_table <-
-           "finngen-production-library.medical_codes.fg_codes_info_v2"
+           "finngen-production-library.medical_codes.fg_codes_info_v5"
          code_prevalence_table <- 
-           "finngen-production-library.sandbox_tools_r11.code_prevalence_stratified_v1"
+           "finngen-production-library.sandbox_tools_r11.code_prevalence_stratified_r11_v1"
          birth_table <- 
            "finngen-production-library.sandbox_tools_r11.birth_mother_r11_v1"
          options(gargle_oauth_cache = FALSE)
@@ -112,7 +115,7 @@ switch(HOST,
          minimum_data_table <-
            "finngen-production-library.sandbox_tools_r11.finngenid_info_r11_v1"
          fg_codes_info_table <-
-           "finngen-production-library.medical_codes.fg_codes_info_v2"
+           "finngen-production-library.medical_codes.fg_codes_info_v5"
          code_prevalence_table <- 
            "finngen-production-library.sandbox_tools_r11.code_prevalence_stratified_r11_v1"
             # "fg-production-sandbox-6.sandbox.code_prevalence_stratified_v1"
