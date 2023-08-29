@@ -623,16 +623,18 @@ server <- function(input, output, session){
     tb <- bq_project_query(projectid, sql, quiet = TRUE)
     df_prevalence <- bq_table_download(tb, quiet = TRUE) |> 
       rename(omop_concept_id_code5 = omop_concept_id) |> 
-      rename(SEX = sex)
+      rename(SEX = sex) |> 
+      mutate(p = ifelse(is.na(n_persons_in_observation), NA, n_persons_with_code / n_persons_in_observation)) |> 
+      mutate(std = ifelse(is.na(n_persons_in_observation), NA, sqrt(p * (1 - p) / n_persons_in_observation)))
     
-    missing_codes <- setdiff(
-      df_all$omop_concept_id_code5 |> na.omit(), 
-      df_prevalence$omop_concept_id_code5|> na.omit()
-    )
-    
-    df_missing_codes <- df_all |> 
-      filter(omop_concept_id_code5 %in% missing_codes) |> 
-      select(SOURCE, CODE1, omop_concept_id_code5, name_en_code5)
+    # missing_codes <- setdiff(
+    #   df_all$omop_concept_id_code5 |> na.omit(), 
+    #   df_prevalence$omop_concept_id_code5|> na.omit()
+    # )
+    # 
+    # df_missing_codes <- df_all |> 
+    #   filter(omop_concept_id_code5 %in% missing_codes) |> 
+    #   select(SOURCE, CODE1, omop_concept_id_code5, name_en_code5)
   
     # browser()
     
@@ -929,9 +931,9 @@ server <- function(input, output, session){
     # make selected points bright, if no selection then all are bright
     # selection can originate from regex or prevalence
     df_points <- values$df_points |> 
-      mutate(alpha = ifelse(is.null(values$df_selected) | INDEX %in% values$df_selected$INDEX, "bright", "dim")) |> 
+      mutate(alpha = ifelse(is.null(values$df_selected) | INDEX %in% values$df_selected$INDEX, "bright", "dim")) |>
       rowwise() |> 
-      mutate(stroke = ifelse(input$prevalence & !is.na(prevalence), 0.5 + 3 * (1.0 - prevalence), 0.5))
+      mutate(stroke = ifelse(input$prevalence & !is.na(prevalence), 0.5 + 3 * (prevalence), 0.5))
       
     # browser()
     
@@ -960,6 +962,7 @@ server <- function(input, output, session){
                            "VOCABULARY : ", vocabulary_id, "\n",
                            "PREVALENCE : ", ifelse(is.na(prevalence), NA, round(prevalence * 100, 2)), "%\n",
                            "PREV.RATIO : ", n_persons_with_code, "/", n_persons_in_observation, "\n",
+                           "STD : ", round(std, 2), "\n",
                            "CAT  : ", CATEGORY, "\n",
                            "AGE : ", EVENT_AGE, "\n\n",
                            str_wrap(name_en, 30), "\n\n",
