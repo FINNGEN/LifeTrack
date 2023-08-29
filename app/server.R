@@ -625,6 +625,17 @@ server <- function(input, output, session){
       rename(omop_concept_id_code5 = source_concept_id) |> 
       rename(SEX = sex)
     
+    missing_codes <- setdiff(
+      df_all$omop_concept_id_code5 |> na.omit(), 
+      df_prevalence$omop_concept_id_code5|> na.omit()
+    )
+    
+    df_missing_codes <- df_all |> 
+      filter(omop_concept_id_code5 %in% missing_codes) |> 
+      select(SOURCE, CODE1, omop_concept_id_code5, name_en_code5)
+  
+    # browser()
+    
     df_all <- df_all |> 
       mutate(age_decile = floor(round(EVENT_AGE)/10) * 10) |> 
       mutate(omop_concept_id_code5 = as.integer(omop_concept_id_code5)) |> 
