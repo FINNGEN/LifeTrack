@@ -949,7 +949,8 @@ server <- function(input, output, session){
         stackdir = input$stackdir,
         stackratio = input$stackratio,
         stackgroups = TRUE,
-        color = "#d8d8d8",
+        # color = "#d8d8d8",
+        color = "white",
         aes(
           x = CLASSIFICATION, y = APPROX_EVENT_DAY,
           alpha = alpha,
