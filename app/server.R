@@ -618,11 +618,11 @@ server <- function(input, output, session){
       "FROM ", code_prevalence_table, " ",
       "WHERE sex = '", values$df_minimum$SEX, "' ",
       "AND year_of_birth = ", year(values$df_minimum$APPROX_BIRTH_DATE), " ",
-      "AND source_concept_id IN (", omop_codes, ")"
+      "AND omop_concept_id IN (", omop_codes, ")"
     )
     tb <- bq_project_query(projectid, sql, quiet = TRUE)
     df_prevalence <- bq_table_download(tb, quiet = TRUE) |> 
-      rename(omop_concept_id_code5 = source_concept_id) |> 
+      rename(omop_concept_id_code5 = omop_concept_id) |> 
       rename(SEX = sex)
     
     missing_codes <- setdiff(
