@@ -117,8 +117,8 @@ switch(HOST,
          fg_codes_info_table <-
            "finngen-production-library.medical_codes.fg_codes_info_v5"
          code_prevalence_table <- 
-           "finngen-production-library.sandbox_tools_r11.code_prevalence_stratified_r11_v1"
-            # "fg-production-sandbox-6.sandbox.code_prevalence_stratified_v1"
+           # "finngen-production-library.sandbox_tools_r11.code_prevalence_stratified_r11_v1"
+          "fg-production-sandbox-6.sandbox.code_prevalence_stratified_v1"
          birth_table <- 
            "finngen-production-library.sandbox_tools_r11.birth_mother_r11_v1"
        },
