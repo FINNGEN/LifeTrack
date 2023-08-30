@@ -127,6 +127,8 @@ switch(HOST,
        }
 )
 
+log_entry("VERSION", VERSION)
+
 # register time spans and color
 df_register_spans <- tribble(
   ~SOURCE, ~START_DATE, ~COLOR, 
@@ -875,7 +877,7 @@ server <- function(input, output, session){
     df_points <- values$df_points |> 
       rowwise() |> 
       mutate(alpha = ifelse(is.null(values$df_selected) | INDEX %in% values$df_selected$INDEX, "bright", "dim")) |>
-      mutate(stroke = ifelse(input$prevalence & !is.na(prevalence), 0.5 + 3 * sqrt(1.0 - prevalence), 1.0))
+      mutate(stroke = ifelse(input$prevalence & !is.na(prevalence), 0.5 + 3 * sqrt(prevalence), 1.0))
       
     # View(select(df_points, 1:3, prevalence, stroke))
     # browser()
