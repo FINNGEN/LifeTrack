@@ -877,7 +877,14 @@ server <- function(input, output, session){
     df_points <- values$df_points |> 
       rowwise() |> 
       mutate(alpha = ifelse(is.null(values$df_selected) | INDEX %in% values$df_selected$INDEX, "bright", "dim")) |>
-      mutate(stroke = ifelse(input$prevalence & !is.na(prevalence), 0.5 + 3 * sqrt(prevalence), 1.0))
+      mutate(stroke = case_when(
+        input$prevalence & !is.na(prevalence) & prevalence <= 0.01 ~ 0.1,
+        input$prevalence & !is.na(prevalence) & prevalence > 0.01 & prevalence <= 0.05 ~ 0.8,
+        input$prevalence & !is.na(prevalence) & prevalence > 0.05 & prevalence < 0.10 ~ 2.3,
+        !input$prevalence ~ 0.1,
+        TRUE ~ 4.0
+      ))
+      # mutate(stroke = ifelse(input$prevalence & !is.na(prevalence), 0.5 + 3 * sqrt(prevalence), 1.0))
       
     # View(select(df_points, 1:3, prevalence, stroke))
     # browser()
@@ -894,8 +901,8 @@ server <- function(input, output, session){
         stackdir = input$stackdir,
         stackratio = input$stackratio,
         stackgroups = TRUE,
-        # color = "#d8d8d8",
-        color = "white",
+        color = ifelse(input$prevalence, "white", "black"),
+        # color = "white",
         aes(
           x = CLASSIFICATION, y = APPROX_EVENT_DAY,
           alpha = alpha,
