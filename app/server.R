@@ -132,7 +132,7 @@ df_register_spans <- tribble(
   ~SOURCE, ~START_DATE, ~COLOR, 
   "PURCH", ymd("1995-01-01"), "#6fcb6c",
   "REIMB", ymd("1964-01-01"), "#ab172b",
-  "PRIM_OUT", ymd("2011-01-01"), "#fdc3ac",
+  "PRIM_OUT", ymd("2011-01-01"), "#c200c6", # "#fdc3ac",
   "INPAT", ymd("1969-01-01"), "#ff4e31",
   "OUTPAT", ymd("1998-01-01"),  "#ad86b7",
   "CANC", ymd("1953-01-01"), "#c1c8c8",
@@ -618,25 +618,14 @@ server <- function(input, output, session){
       "FROM ", code_prevalence_table, " ",
       "WHERE sex = '", values$df_minimum$SEX, "' ",
       "AND year_of_birth = ", year(values$df_minimum$APPROX_BIRTH_DATE), " ",
-      "AND omop_concept_id IN (", omop_codes, ")"
+      "AND omop_concept_id IN (", omop_codes, ")" # source_concept_id/omop_concept_id
     )
     tb <- bq_project_query(projectid, sql, quiet = TRUE)
     df_prevalence <- bq_table_download(tb, quiet = TRUE) |> 
-      rename(omop_concept_id_code5 = omop_concept_id) |> 
+      rename(omop_concept_id_code5 = omop_concept_id) |> # source_concept_id/omop_concept_id
       rename(SEX = sex) |> 
       mutate(p = ifelse(is.na(n_persons_in_observation), NA, n_persons_with_code / n_persons_in_observation)) |> 
       mutate(std = ifelse(is.na(n_persons_in_observation), NA, sqrt(p * (1 - p) / n_persons_in_observation)))
-    
-    # missing_codes <- setdiff(
-    #   df_all$omop_concept_id_code5 |> na.omit(), 
-    #   df_prevalence$omop_concept_id_code5|> na.omit()
-    # )
-    # 
-    # df_missing_codes <- df_all |> 
-    #   filter(omop_concept_id_code5 %in% missing_codes) |> 
-    #   select(SOURCE, CODE1, omop_concept_id_code5, name_en_code5)
-  
-    # browser()
     
     df_all <- df_all |> 
       mutate(age_decile = floor(round(EVENT_AGE)/10) * 10) |> 
@@ -794,53 +783,6 @@ server <- function(input, output, session){
   }, ignoreInit = TRUE)
   
   #
-  # show_prevalence 
-  #
-  
-  # observeEvent(input$show_prevalence, {
-  #   
-  #   log_entry("show prevalence")
-  #   shinyjs::runjs("window.scrollTo(0, 0)")
-  #   
-  #   updateTextInput(session, "entry_regexp", value = "")
-  #   updateTextInput(session, "class_regexp", value = "")
-  # 
-  #   if(is.null(values$df_all)) return()
-  #   
-  #   log_entry("selection on prevalence")
-  #   prevalence_limits <- input$prevalence / 100
-  #   df_selected <- values$df_points |> 
-  #     filter(prevalence_limits[1] <= prevalence & prevalence <= prevalence_limits[2])
-  #   
-  #   # warn if none was found
-  #   if(nrow(df_selected) == 0){
-  #     showModalProgress(
-  #       paste0("No entries with prevalence ", 
-  #              paste0(prevalence_limits[1] * 100, "% - "), prevalence_limits[2] * 100, "%"))
-  #   }
-  #   
-  #   values$df_selected <- df_selected
-  # 
-  # }, ignoreInit = TRUE)
-  # 
-  # #
-  # # reset_prevalence ####
-  # #
-  # 
-  # observeEvent(input$reset_prevalence, {
-  #   log_entry("reset prevalence")
-  #   
-  #   df_selected <- NULL
-  #   updateSliderInput(session, "prevalence", value = c(0.0, 100.0))
-  #   
-  #   build_plot_values(values$df_all, values)
-  #   
-  #   values$df_selected <- NULL
-  #   shinyjs::runjs("window.scrollTo(0, 0)")
-  #   
-  # }, ignoreInit = TRUE)
-  
-  #
   # selection to table ####
   #
   
@@ -931,10 +873,11 @@ server <- function(input, output, session){
     # make selected points bright, if no selection then all are bright
     # selection can originate from regex or prevalence
     df_points <- values$df_points |> 
-      mutate(alpha = ifelse(is.null(values$df_selected) | INDEX %in% values$df_selected$INDEX, "bright", "dim")) |>
       rowwise() |> 
-      mutate(stroke = ifelse(input$prevalence & !is.na(prevalence), 0.5 + 3 * (prevalence), 0.5))
+      mutate(alpha = ifelse(is.null(values$df_selected) | INDEX %in% values$df_selected$INDEX, "bright", "dim")) |>
+      mutate(stroke = ifelse(input$prevalence & !is.na(prevalence), 0.5 + 3 * sqrt(1.0 - prevalence), 1.0))
       
+    # View(select(df_points, 1:3, prevalence, stroke))
     # browser()
     
     gg_plot <- ggplot() +
@@ -992,7 +935,7 @@ server <- function(input, output, session){
       ) +
       scale_fill_manual(name = "SOURCE", values = register_colors) +
       scale_color_manual(name = "SOURCE", values = register_colors) +
-      scale_alpha_manual(values = c("bright" = 1.0, "dim" = 0.2)) +
+      scale_alpha_manual(values = c("bright" = 1.0, "dim" = 0.2, "zero" = 0.0)) +
       scale_y_date(breaks = "5 years", date_minor_breaks = "1 years", date_labels = "%Y") +
       scale_x_discrete(labels = str_trunc(levels(values$df_points$X_label), 60), expand = expansion(add = 1.5)) +
       coord_flip() +
