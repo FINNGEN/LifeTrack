@@ -749,9 +749,6 @@ server <- function(input, output, session){
           paste0("No entries with \"", entry_regexp, "\" found!"))
       }
     }
-    
-    # updateSliderInput(session, "prevalence", value = c(0.0, 100.0))
-    
   }, ignoreInit = TRUE)
   
   #
@@ -765,8 +762,7 @@ server <- function(input, output, session){
     updateTextInput(session, "entry_regexp", value = "")
     updateTextInput(session, "class_regexp", value = "")
     updateSliderInput(session, "date_range", value = values$date_range)
-    # updateSliderInput(session, "prevalence", value = c(0, 100.0))
-    
+
     if(is.null(values$df_all)) return()
     
     build_plot_values(values$df_all, values)
@@ -820,12 +816,14 @@ server <- function(input, output, session){
     df_lasso <- df_lasso |> 
       mutate(prevalence = round(100 * prevalence,1)) |> 
       mutate(prevalence_ratio = paste0(n_persons_with_code, "/", n_persons_in_observation)) |> 
+      mutate(std = round(std,3)) |> 
       select(
         visit_type_name_en, 
         APPROX_EVENT_DAY, 
         CODE1, 
         prevalence, 
         prevalence_ratio,
+        std,
         name_en
       )
     
@@ -840,6 +838,7 @@ server <- function(input, output, session){
               'Translation' = 'name_en',
               'Prev%' = 'prevalence',
               'Prev' = 'prevalence_ratio',
+              'STD' = 'std',
               'Service sector' = 'visit_type_name_en'
             )
           )
@@ -879,9 +878,9 @@ server <- function(input, output, session){
       mutate(alpha = ifelse(is.null(values$df_selected) | INDEX %in% values$df_selected$INDEX, "bright", "dim")) |>
       mutate(stroke = case_when(
         input$prevalence & !is.na(prevalence) & prevalence <= 0.01 ~ 0.1,
-        input$prevalence & !is.na(prevalence) & prevalence > 0.01 & prevalence <= 0.05 ~ 0.8,
-        input$prevalence & !is.na(prevalence) & prevalence > 0.05 & prevalence < 0.10 ~ 2.3,
-        !input$prevalence ~ 0.1,
+        input$prevalence & !is.na(prevalence) & prevalence > 0.01 & prevalence <= 0.05 ~ 1.0,
+        input$prevalence & !is.na(prevalence) & prevalence > 0.05 & prevalence < 0.10 ~ 2.5,
+        !input$prevalence ~ 0.5,
         TRUE ~ 4.0
       ))
       # mutate(stroke = ifelse(input$prevalence & !is.na(prevalence), 0.5 + 3 * sqrt(prevalence), 1.0))
@@ -901,7 +900,7 @@ server <- function(input, output, session){
         stackdir = input$stackdir,
         stackratio = input$stackratio,
         stackgroups = TRUE,
-        color = ifelse(input$prevalence, "white", "black"),
+        color = ifelse(input$prevalence, "white", "gray"),
         # color = "white",
         aes(
           x = CLASSIFICATION, y = APPROX_EVENT_DAY,
@@ -915,7 +914,7 @@ server <- function(input, output, session){
                            "VOCABULARY : ", vocabulary_id, "\n",
                            "PREVALENCE : ", ifelse(is.na(prevalence), NA, round(prevalence * 100, 2)), "%\n",
                            "PREV.RATIO : ", n_persons_with_code, "/", n_persons_in_observation, "\n",
-                           "STD : ", round(std, 2), "\n",
+                           "STD : ", round(std, 3), "\n",
                            "CAT  : ", CATEGORY, "\n",
                            "AGE : ", EVENT_AGE, "\n\n",
                            str_wrap(name_en, 30), "\n\n",
