@@ -900,7 +900,7 @@ server <- function(input, output, session){
         stackdir = input$stackdir,
         stackratio = input$stackratio,
         stackgroups = TRUE,
-        color = ifelse(input$prevalence, "white", "gray"),
+        color = ifelse(input$prevalence, "white", "black"),
         # color = "white",
         aes(
           x = CLASSIFICATION, y = APPROX_EVENT_DAY,
