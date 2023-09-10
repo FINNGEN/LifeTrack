@@ -27,7 +27,9 @@ log_entry("initializing")
 
 # what is the environment?
 SANDBOX_PATH <- (path.expand('~') == "/home/ivm")
-BUCKET_SANDBOX_IVM <- Sys.getenv("BUCKET_SANDBOX_IVM") %>% stringr::str_remove("-red$")
+BUCKET_SANDBOX_IVM <- Sys.getenv("BUCKET_SANDBOX_IVM") |> 
+  stringr::str_remove("-red$") |> 
+  stringr::str_remove("_ivm$")
 DOCKER_PATH <- (path.expand('~') == "/root")
 
 log_entry("PATH", path.expand('~'))
@@ -57,7 +59,12 @@ switch(HOST,
          minimum_data_table <-
            "atlas-development-270609.sandbox_tools_r11.finngenid_info_r11_v1"
          fg_codes_info_table <-
-           "atlas-development-270609.medical_codes.fg_codes_info_v2"
+           "atlas-development-270609.medical_codes.fg_codes_info_v5"
+         code_prevalence_table <- 
+           "atlas-development-270609.sandbox_tools_r11.code_prevalence_stratified_v1"
+         # "atlas-development-270609.sandbox_tools_r11.code_prevalence_stratified_r11_v1"
+         birth_table <- 
+           "atlas-development-270609.sandbox_tools_r11.birth_mother_r11_v1"
        },
        'MAC_DOCKER' = {
          projectid <- "atlas-development-270609"
@@ -72,7 +79,11 @@ switch(HOST,
          minimum_data_table <-
            "atlas-development-270609.sandbox_tools_r11.finngenid_info_r11_v1"
          fg_codes_info_table <-
-           "atlas-development-270609.medical_codes.fg_codes_info_v2"
+           "atlas-development-270609.medical_codes.fg_codes_info_v5"
+         code_prevalence_table <- 
+           "atlas-development-270609.sandbox_tools_r11.code_prevalence_stratified_v1"
+         birth_table <- 
+           "atlas-development-270609.sandbox_tools_r11.birth_mother_r11_v1"
        },
        'SANDBOX' = {
          # RStudio sanitizes BUCKET_SANDBOX_IVM away, must be hard-coded
@@ -84,7 +95,11 @@ switch(HOST,
          minimum_data_table <-
            "finngen-production-library.sandbox_tools_r11.finngenid_info_r11_v1"
          fg_codes_info_table <-
-           "finngen-production-library.medical_codes.fg_codes_info_v2"
+           "finngen-production-library.medical_codes.fg_codes_info_v5"
+         code_prevalence_table <- 
+           "finngen-production-library.sandbox_tools_r11.code_prevalence_stratified_r11_v1"
+         birth_table <- 
+           "finngen-production-library.sandbox_tools_r11.birth_mother_r11_v1"
          options(gargle_oauth_cache = FALSE)
          bq_auth(scopes = "https://www.googleapis.com/auth/bigquery")
        },
@@ -100,25 +115,33 @@ switch(HOST,
          minimum_data_table <-
            "finngen-production-library.sandbox_tools_r11.finngenid_info_r11_v1"
          fg_codes_info_table <-
-           "finngen-production-library.medical_codes.fg_codes_info_v2"
+           "finngen-production-library.medical_codes.fg_codes_info_v5"
+         code_prevalence_table <- 
+           "finngen-production-library.sandbox_tools_r11.code_prevalence_stratified_r11_v2"
+          # "fg-production-sandbox-6.sandbox.code_prevalence_stratified_v1"
+         birth_table <- 
+           "finngen-production-library.sandbox_tools_r11.birth_mother_r11_v1"
        },
        {
          stop("unknown HOST")
        }
 )
 
+log_entry("VERSION", VERSION)
+
 # register time spans and color
 df_register_spans <- tribble(
   ~SOURCE, ~START_DATE, ~COLOR, 
   "PURCH", ymd("1995-01-01"), "#6fcb6c",
   "REIMB", ymd("1964-01-01"), "#ab172b",
-  "PRIM_OUT", ymd("2011-01-01"), "#fdc3ac",
+  "PRIM_OUT", ymd("2011-01-01"), "#c200c6", # "#fdc3ac",
   "INPAT", ymd("1969-01-01"), "#ff4e31",
   "OUTPAT", ymd("1998-01-01"),  "#ad86b7",
   "CANC", ymd("1953-01-01"), "#c1c8c8",
   "DEATH", ymd("1969-01-01"), "black",
   "OPER_IN", ymd("1969-01-01"), "#0f71e0",
-  "OPER_OUT", ymd("1969-01-01"),  "#36c4e3"
+  "OPER_OUT", ymd("1969-01-01"),  "#36c4e3",
+  "BIRTH", ymd("1953-01-01"), "#62F701"
 )
 
 register_colors <- deframe(select(df_register_spans, SOURCE, COLOR))
@@ -146,6 +169,9 @@ build_plot_values <- function(df_all, values){
   df_all <- df_all |> 
     mutate(chapter = case_when(
       SOURCE == "DEATH" ~ "DEATH",
+      SOURCE == "BIRTH" ~ "BIRTH",
+      SOURCE == "REIMB" ~ "REIMB",
+      SOURCE == "CANC" ~ "CANC",
       str_detect(vocabulary_id, "ATC") ~ str_sub(CODE1, end = 1), # the ATC top level
       str_detect(vocabulary_id, "ICD10fi") ~ str_sub(str_replace(FG_CODE1, fixed("."), ""), end = 3),
       str_detect(vocabulary_id, "ICD(8|9)fi") ~ "ICD8or9",
@@ -158,18 +184,19 @@ build_plot_values <- function(df_all, values){
       TRUE ~ "Unclassified"
     )) |> 
     mutate(ORDER = case_when(
-      SOURCE == "DEATH" ~ 4,
-      SOURCE == "REIMB" ~ 5,
-      SOURCE == "CANC" ~ 6,
+      SOURCE == "BIRTH" ~ 4,
+      SOURCE == "DEATH" ~ 5,
+      SOURCE == "REIMB" ~ 6,
+      SOURCE == "CANC" ~ 7,
       str_detect(vocabulary_id, "ATC") ~ 1,
       str_detect(vocabulary_id, "ICD10fi") ~ 2,
       str_detect(vocabulary_id, "ICD(8|9)fi") ~ 3,
-      str_detect(vocabulary_id, "FHL") ~ 7,
-      str_starts(vocabulary_id, "ICPC") ~ 8,
-      str_starts(vocabulary_id, "HPN") ~ 9,
-      str_starts(vocabulary_id, "NCSP") ~ 10,
-      str_starts(vocabulary_id, "HPO") ~ 11,
-      str_starts(vocabulary_id, "SPAT") ~ 12,
+      str_detect(vocabulary_id, "FHL") ~ 8,
+      str_starts(vocabulary_id, "ICPC") ~ 9,
+      str_starts(vocabulary_id, "HPN") ~ 10,
+      str_starts(vocabulary_id, "NCSP") ~ 11,
+      str_starts(vocabulary_id, "HPO") ~ 12,
+      str_starts(vocabulary_id, "SPAT") ~ 13,
       TRUE ~ 0 # "Unclassified"
     ))
   
@@ -220,6 +247,7 @@ build_plot_values <- function(df_all, values){
       str_length(chapter) == 4 & chapter == "ICPC" ~ "Reason for visit (ICPC)",
       str_length(chapter) == 4 & chapter == "NCSP" ~ "Nordic Classification of Surgical Procedures (NCSP)",
       chapter == "ICD8or9" ~ "ICD8 or ICD9",
+      SOURCE == "BIRTH" ~ "Birth Registry",
       SOURCE == "CANC" ~ "Cancer Registry",
       SOURCE == "REIMB" ~ "KELA Reimbursement",
       SOURCE == "DEATH" ~ "Death Registry",
@@ -235,8 +263,11 @@ build_plot_values <- function(df_all, values){
     mutate(y_order = row_number()) |> 
     mutate(CLASSIFICATION = fct_reorder(CLASSIFICATION, y_order)) |> 
     mutate(X_label = fct_reorder(str_wrap(CLASSIFICATION, 30), y_order)) |> 
-    mutate(data_id = INDEX)
-
+    mutate(data_id = case_when(
+      is.na(INDEX) | INDEX == '' ~ paste0(row_number(), '_BIRTH'),
+      TRUE ~ INDEX
+    ))
+  
   df_points <- df_points |>
     mutate_at(c('name_en','name_en_top'), ~replace_na(.,"")) |> 
     mutate_at(c('provider_name_en','visit_type_name_en'), ~replace_na(.,"")) 
@@ -247,7 +278,7 @@ build_plot_values <- function(df_all, values){
     mutate(SECTION = case_when(
       CLASSIFICATION == "Unclassified" ~ "UNCLASSIFIEDS",
       SOURCE == "PURCH" ~ "MEDICATIONS (ATC)",
-      SOURCE %in% c("REIMB", "CANC", "DEATH") ~ "CERTIFIED DIAGNOSES",
+      SOURCE %in% c("REIMB", "CANC", "DEATH", "BIRTH") ~ "CERTIFIED DIAGNOSES",
       str_starts(vocabulary_id, "SPAT") ~ "PROCEDURES",
       str_starts(vocabulary_id, "ICPC") ~ "PROCEDURES",
       str_starts(vocabulary_id, "NCSP") ~ "PROCEDURES",
@@ -296,7 +327,6 @@ build_plot_values <- function(df_all, values){
   values$df_points <- df_points
 }
 
-
 # event handling ####
 
 server <- function(input, output, session){
@@ -305,7 +335,7 @@ server <- function(input, output, session){
   cohort <- NULL
   cohort_saved <- NULL
   person <- ""
-  
+
   # reactive data
   values <- reactiveValues(
     df_all = NULL,
@@ -332,10 +362,35 @@ server <- function(input, output, session){
   
   get_all_data <- function(finngenid){
     log_entry("reading person:", finngenid)
+    # sql <- paste0(
+    #   "SELECT * ",
+    #   "FROM ", longitudinal_data_table, " ",
+    #   "WHERE FINNGENID = '", finngenid, "'"
+    # )
     sql <- paste0(
       "SELECT * ",
       "FROM ", longitudinal_data_table, " ",
-      "WHERE FINNGENID = '", finngenid, "'"
+      "WHERE FINNGENID = '", finngenid, "' ",
+      "UNION ALL ",
+      "SELECT " ,
+      "MOTHER_FINNGENID AS FINNGENID, ",
+      "'BIRTH', ",
+      "MOTHER_AGE AS EVENT_AGE, ",
+      "APPROX_BIRTH_DATE AS APPROX_EVENT_DAY, ",
+      "SDIAG1 AS CODE1, ",
+      "NULL, ",
+      "NULL, ",
+      "NULL, ",
+      "NULL, ",
+      "NULL, ",
+      "NULL, ",
+      "NULL, ",
+      "NULL, ",
+      "NULL, ",
+      "NULL, ",
+      "NULL ",
+      "FROM ", birth_table, " ", 
+      "WHERE MOTHER_FINNGENID = '", finngenid, "'"    
     )
     tb <- bq_project_query(projectid, sql, quiet = TRUE)
   }
@@ -445,7 +500,7 @@ server <- function(input, output, session){
     # code translations ####
     #
     tb_saved <- tb <- get_all_data(person)
-
+    
     df <- fg_bq_append_code_info_to_longitudinal_data(
       projectid, tb,
       fg_codes_info_table,
@@ -554,8 +609,58 @@ server <- function(input, output, session){
     df_all <- left_join(df_all, select(df_minimum, FINNGENID, SEX, APPROX_BIRTH_DATE), by = "FINNGENID") 
     df_all <- left_join(df_all, select(df_register_spans, SOURCE, COLOR), by = "SOURCE")
     
+    #
+    # get code prevalences ####
+    #
+    # - download only the omop codes the person has
+    #
+    omop_codes <- toString(df_all$omop_concept_id_code5 |> na.omit())
+    sql <- paste0(
+      "SELECT * ",
+      "FROM ", code_prevalence_table, " ",
+      "WHERE sex = '", values$df_minimum$SEX, "' ",
+      "AND year_of_birth = ", year(values$df_minimum$APPROX_BIRTH_DATE), " ",
+      "AND source_concept_id IN (", omop_codes, ")" # source_concept_id/omop_concept_id
+    )
+    tb <- bq_project_query(projectid, sql, quiet = TRUE)
+    df_prevalence <- bq_table_download(tb, quiet = TRUE) |> 
+      rename(omop_concept_id_code5 = source_concept_id) |> # source_concept_id/omop_concept_id
+      rename(SEX = sex) |> 
+      mutate(p = ifelse(is.na(n_persons_in_observation), NA, n_persons_with_code / n_persons_in_observation)) |> 
+      mutate(std = ifelse(is.na(n_persons_in_observation), NA, sqrt(p * (1 - p) / n_persons_in_observation)))
+    
+    df_all <- df_all |> 
+      mutate(age_decile = floor(round(EVENT_AGE)/10) * 10) |> 
+      mutate(omop_concept_id_code5 = as.integer(omop_concept_id_code5)) |> 
+      mutate(year_of_birth = year(APPROX_BIRTH_DATE))
+    
+    # browser()
+
+    if(nrow(df_prevalence) == 0){
+      # no prevalence data, should happen only with atlas_dev?
+      df_all$n_persons_with_code <- NA
+      df_all$n_persons_in_observation <- NA
+    } else {   
+      # augment df_all with code prevalences
+      df_all <- left_join(
+        df_all, 
+        df_prevalence, 
+        by = c("omop_concept_id_code5", "age_decile", "SEX", "year_of_birth")
+      )
+    }
+    
+    # mutate prevalence to 0..1, missing data coded 1
+    df_all <- df_all |> 
+      mutate(prevalence = case_when(
+        !is.na(n_persons_with_code) & !is.na(n_persons_in_observation) ~ (n_persons_with_code / n_persons_in_observation),
+        TRUE ~ NA
+      ))
+    
+    # build the points
     build_plot_values(df_all, values)
     values$df_all <- df_all
+    
+    # apply filters to fetched data
     
     class_regexp <- str_trim(input$class_regexp)
     if(class_regexp != ""){
@@ -587,7 +692,7 @@ server <- function(input, output, session){
       
       values$df_selected <- df_selected
     }
-    
+
     removeModal()
   }, ignoreInit = TRUE)
   
@@ -644,23 +749,22 @@ server <- function(input, output, session){
           paste0("No entries with \"", entry_regexp, "\" found!"))
       }
     }
-    
   }, ignoreInit = TRUE)
   
   #
-  # reset_filter
+  # reset_filter ####
   #
   
   observeEvent(input$reset_filter, {
-
+    
     log_entry("filter reset")
     
     updateTextInput(session, "entry_regexp", value = "")
     updateTextInput(session, "class_regexp", value = "")
     updateSliderInput(session, "date_range", value = values$date_range)
-    
+
     if(is.null(values$df_all)) return()
-        
+    
     build_plot_values(values$df_all, values)
     
     values$df_selected <- NULL
@@ -669,7 +773,15 @@ server <- function(input, output, session){
   }, ignoreInit = TRUE)
   
   #
-  # selection handling ####
+  # prevalence ####
+  #
+  
+  observeEvent(input$prevalence, {
+    shinyjs::runjs("window.scrollTo(0, 0)")
+  }, ignoreInit = TRUE)
+  
+  #
+  # selection to table ####
   #
   
   observeEvent(input$mainplot_selected, {
@@ -679,38 +791,61 @@ server <- function(input, output, session){
     # get selected points from girafe
     selected_rows <- input$mainplot_selected
     
-    # if one of the highlighted values is selected, extend to all of them
-    if(!is.null(values$df_selected) && selected_rows %in% values$df_selected$INDEX){ 
+    # if any of the highlighted values are in selected, extend to all of them
+    if(!is.null(values$df_selected) && any(selected_rows %in% values$df_selected$INDEX)){ 
       selected_rows <- values$df_selected$INDEX
     }
     
-    # get the data for the selected INDEX values
     df_lasso <- values$df_points |> 
-      filter(data_id %in% selected_rows) |> 
-      select(SOURCE, APPROX_EVENT_DAY, CODE1, name_en, visit_type_name_en) |>
-      rename(EVENT_DATE = APPROX_EVENT_DAY, TRANSLATION = name_en, SERVICE_SECTOR = visit_type_name_en) |>
-      select(SERVICE_SECTOR, EVENT_DATE, CODE1, TRANSLATION)
-    
-    # if only one DATE_DATE is selected -> extend selection
-    # by input$selection_extension
-    if(length(unique(df_lasso$EVENT_DATE)) == 1){
-      event_date <- first(df_lasso$EVENT_DATE)
+      filter(data_id %in% selected_rows) 
+      
+    # if only one date is selected -> extend selection
+    # by +/- input$selection_extension
+    if(length(unique(df_lasso$APPROX_EVENT_DAY)) == 1){
+      event_date <- first(df_lasso$APPROX_EVENT_DAY)
       extension <- isolate(input$selection_extension)
       selection_start <- event_date - months(extension)
       selection_end <- event_date + months(extension)
-      df_lasso <- values$df_points |> 
-        select(SOURCE, APPROX_EVENT_DAY, CODE1, name_en, visit_type_name_en) |>
-        rename(EVENT_DATE = APPROX_EVENT_DAY, TRANSLATION = name_en, SERVICE_SECTOR = visit_type_name_en) |> 
-        filter(EVENT_DATE >= selection_start & EVENT_DATE <= selection_end ) |> 
-        select(SERVICE_SECTOR, EVENT_DATE, CODE1, TRANSLATION)
+      selected_points <- values$df_points |> 
+        filter(APPROX_EVENT_DAY >= selection_start & APPROX_EVENT_DAY <= selection_end )
+    } else {
+      selected_points <- values$df_points |> 
+        filter(data_id %in% selected_rows)
     }
+    
+    df_lasso <- df_lasso |> 
+      mutate(prevalence = round(100 * prevalence,1)) |> 
+      mutate(prevalence_ratio = paste0(n_persons_with_code, "/", n_persons_in_observation)) |> 
+      mutate(std = round(std,3)) |> 
+      select(
+        visit_type_name_en, 
+        APPROX_EVENT_DAY, 
+        CODE1, 
+        prevalence, 
+        prevalence_ratio,
+        std,
+        name_en
+      )
     
     showModal(
       modalDialog(
-        DT::renderDataTable({ DT::datatable(df_lasso) }),
+        DT::renderDataTable({ 
+          DT::datatable(
+            df_lasso,
+            colnames = c(
+              'Event date' = 'APPROX_EVENT_DAY',
+              'Code' = 'CODE1',
+              'Translation' = 'name_en',
+              'Prev%' = 'prevalence',
+              'Prev' = 'prevalence_ratio',
+              'STD' = 'std',
+              'Service sector' = 'visit_type_name_en'
+            )
+          )
+        }),
         size = "l",
         easyClose = FALSE,
-        title = "Entries",
+        title = paste0("Entries (", nrow(df_lasso), ")"),
         footer = modalButton("Close"),
         options = list(
           autowidth = TRUE
@@ -737,8 +872,21 @@ server <- function(input, output, session){
     log_entry("dotsize", dotsize + input$dotsize)
     
     # make selected points bright, if no selection then all are bright
+    # selection can originate from regex or prevalence
     df_points <- values$df_points |> 
-      mutate(alpha = ifelse(is.null(values$df_selected) | INDEX %in% values$df_selected$INDEX, "bright", "dim"))
+      rowwise() |> 
+      mutate(alpha = ifelse(is.null(values$df_selected) | INDEX %in% values$df_selected$INDEX, "bright", "dim")) |>
+      mutate(stroke = case_when(
+        input$prevalence & !is.na(prevalence) & prevalence <= 0.01 ~ 0.3,
+        input$prevalence & !is.na(prevalence) & prevalence > 0.01 & prevalence <= 0.05 ~ 1.0,
+        input$prevalence & !is.na(prevalence) & prevalence > 0.05 & prevalence < 0.10 ~ 2.5,
+        !input$prevalence ~ 0.5,
+        TRUE ~ 4.0
+      ))
+      # mutate(stroke = ifelse(input$prevalence & !is.na(prevalence), 0.5 + 3 * sqrt(prevalence), 1.0))
+      
+    # View(select(df_points, 1:3, prevalence, stroke))
+    # browser()
     
     gg_plot <- ggplot() +
       geom_dotplot_interactive(
@@ -752,15 +900,21 @@ server <- function(input, output, session){
         stackdir = input$stackdir,
         stackratio = input$stackratio,
         stackgroups = TRUE,
-        stroke = 0.5,
+        color = ifelse(input$prevalence, "white", "black"),
+        # color = "white",
         aes(
           x = CLASSIFICATION, y = APPROX_EVENT_DAY,
           alpha = alpha,
+          stroke = stroke,
           fill = SOURCE,
-          tooltip = paste0(APPROX_EVENT_DAY, "\n", 
+          # color = SOURCE,
+          tooltip = paste0(APPROX_EVENT_DAY, "\n",
                            SOURCE, "\n",
-                           "CODE : ", CODE1, "\n", 
+                           "CODE : ", CODE1, "\n",
                            "VOCABULARY : ", vocabulary_id, "\n",
+                           "PREVALENCE : ", ifelse(is.na(prevalence), NA, round(prevalence * 100, 2)), "%\n",
+                           "PREV.RATIO : ", n_persons_with_code, "/", n_persons_in_observation, "\n",
+                           "STD : ", round(std, 3), "\n",
                            "CAT  : ", CATEGORY, "\n",
                            "AGE : ", EVENT_AGE, "\n\n",
                            str_wrap(name_en, 30), "\n\n",
@@ -768,7 +922,7 @@ server <- function(input, output, session){
                                   paste("-", str_wrap(name_en_top, 30), "\n\n"), ""),
                            "- ", X_label, "\n\n",
                            ifelse(!is.na(provider_name_en) & str_length(provider_name_en), paste(provider_name_en, "\n"), ""),
-                           ifelse(!is.na(visit_type_name_en) & str_length(visit_type_name_en), 
+                           ifelse(!is.na(visit_type_name_en) & str_length(visit_type_name_en),
                                   paste(str_wrap(visit_type_name_en, 30)), "")
           ),
           data_id = data_id # paste0(CLASSIFICATION, "---", APPROX_EVENT_DAY)
@@ -789,7 +943,7 @@ server <- function(input, output, session){
       ) +
       scale_fill_manual(name = "SOURCE", values = register_colors) +
       scale_color_manual(name = "SOURCE", values = register_colors) +
-      scale_alpha_manual(values = c("bright" = 1.0, "dim" = 0.2)) +
+      scale_alpha_manual(values = c("bright" = 1.0, "dim" = 0.2, "zero" = 0.0)) +
       scale_y_date(breaks = "5 years", date_minor_breaks = "1 years", date_labels = "%Y") +
       scale_x_discrete(labels = str_trunc(levels(values$df_points$X_label), 60), expand = expansion(add = 1.5)) +
       coord_flip() +
@@ -853,6 +1007,8 @@ server <- function(input, output, session){
   # handle window close ####
   onStop(function() {
     log_entry("window close")
+    # remove global vars
+    # rm(df_prevalence, df_register_spans, envir = .GlobalEnv)
     stopApp()
   }, session)
   
