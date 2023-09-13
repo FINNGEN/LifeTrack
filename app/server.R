@@ -371,7 +371,7 @@ server <- function(input, output, session){
       "SELECT * ",
       "FROM ", longitudinal_data_table, " ",
       "WHERE FINNGENID = '", finngenid, "' ",
-      "UNION ALL ",
+      "UNION DISTINCT ",
       "SELECT " ,
       "MOTHER_FINNGENID AS FINNGENID, ",
       "'BIRTH', ",
