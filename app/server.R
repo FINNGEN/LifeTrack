@@ -61,7 +61,7 @@ switch(HOST,
          fg_codes_info_table <-
            "atlas-development-270609.medical_codes.fg_codes_info_v5"
          code_prevalence_table <- 
-           "atlas-development-270609.sandbox_tools_r11.code_prevalence_stratified_v1"
+           "atlas-development-270609.sandbox_tools_r11.code_prevalence_stratified_v2"
          # "atlas-development-270609.sandbox_tools_r11.code_prevalence_stratified_r11_v1"
          birth_table <- 
            "atlas-development-270609.sandbox_tools_r11.birth_mother_r11_v1"
@@ -81,7 +81,7 @@ switch(HOST,
          fg_codes_info_table <-
            "atlas-development-270609.medical_codes.fg_codes_info_v5"
          code_prevalence_table <- 
-           "atlas-development-270609.sandbox_tools_r11.code_prevalence_stratified_v1"
+           "atlas-development-270609.sandbox_tools_r11.code_prevalence_stratified_v2"
          birth_table <- 
            "atlas-development-270609.sandbox_tools_r11.birth_mother_r11_v1"
        },
@@ -387,8 +387,8 @@ server <- function(input, output, session){
       "NULL, ",
       "NULL, ",
       "NULL, ",
-      "NULL, ",
-      "NULL ",
+      "'BIRTH', ",
+      "CONCAT(MOTHER_FINNGENID, '_', 'CHILD','_', NRO_CHILD) ",
       "FROM ", birth_table, " ", 
       "WHERE MOTHER_FINNGENID = '", finngenid, "'"    
     )
