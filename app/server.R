@@ -61,7 +61,7 @@ switch(HOST,
          fg_codes_info_table <-
            "atlas-development-270609.medical_codes.fg_codes_info_v5"
          code_prevalence_table <- 
-           "atlas-development-270609.sandbox_tools_r11.code_prevalence_stratified_v2"
+           "atlas-development-270609.sandbox_tools_r11.code_prevalence_stratified_v3"
          # "atlas-development-270609.sandbox_tools_r11.code_prevalence_stratified_r11_v1"
          birth_table <- 
            "atlas-development-270609.sandbox_tools_r11.birth_mother_r11_v1"
@@ -81,7 +81,7 @@ switch(HOST,
          fg_codes_info_table <-
            "atlas-development-270609.medical_codes.fg_codes_info_v5"
          code_prevalence_table <- 
-           "atlas-development-270609.sandbox_tools_r11.code_prevalence_stratified_v2"
+           "atlas-development-270609.sandbox_tools_r11.code_prevalence_stratified_v3"
          birth_table <- 
            "atlas-development-270609.sandbox_tools_r11.birth_mother_r11_v1"
        },
@@ -370,8 +370,13 @@ server <- function(input, output, session){
     sql <- paste0(
       "SELECT * ",
       "FROM ", longitudinal_data_table, " ",
-      "WHERE FINNGENID = '", finngenid, "' ",
-      "UNION DISTINCT ",
+      "WHERE FINNGENID = '", finngenid, "' "
+    )
+    tb <- bq_project_query(projectid, sql, quiet = TRUE)
+  }
+  
+  get_birth_data <- function(finngenid){
+    sql <- paste0(
       "SELECT " ,
       "MOTHER_FINNGENID AS FINNGENID, ",
       "'BIRTH', ",
@@ -382,13 +387,20 @@ server <- function(input, output, session){
       "NULL, ",
       "NULL, ",
       "NULL, ",
+      "CONCAT('PARITY/NRO = ', PARITY, '/', NRO_CHILD), ", # CATEGORY
+      "CONCAT(MOTHER_FINNGENID,'_', PARITY,'_', NRO_CHILD), ", # INDEX
       "NULL, ",
       "NULL, ",
       "NULL, ",
       "NULL, ",
       "NULL, ",
-      "'BIRTH', ",
-      "CONCAT(MOTHER_FINNGENID, '_', 'CHILD','_', NRO_CHILD) ",
+      "NULL, ",
+      "NULL, ",
+      "NULL, ",
+      "NULL, ",
+      "NULL, ",
+      "NULL, ",
+      "NULL, ",
       "FROM ", birth_table, " ", 
       "WHERE MOTHER_FINNGENID = '", finngenid, "'"    
     )
@@ -574,6 +586,17 @@ server <- function(input, output, session){
       by = c("CODE1", "CATEGORY", "INDEX")
     ) 
     
+    #
+    # birth data ###
+    #
+    tb_birth <- get_birth_data(person)
+    df_birth <- bq_table_download(tb_birth)
+    
+    if(nrow(df_birth) > 0) {
+      names(df_birth) <- names(df_all)
+      df_all <- rbind(df_all, df_birth)
+    }
+    
     # check if the FINNGENID is in the data
     if(nrow(df_all) == 0){
       showModalProgress("No such FINNGENID in the database!")
@@ -582,7 +605,7 @@ server <- function(input, output, session){
       return(NULL)
     }   
     
-    if(nrow(df_all) != nrow(df_all_provider)){
+    if(nrow(df_all) != nrow(df_all_provider) + nrow(df_birth)){
       message("join failed, the primary key is false")
       browser()
     }
@@ -880,7 +903,7 @@ server <- function(input, output, session){
         input$prevalence & !is.na(prevalence) & prevalence <= 0.01 ~ 0.3,
         input$prevalence & !is.na(prevalence) & prevalence > 0.01 & prevalence <= 0.05 ~ 1.0,
         input$prevalence & !is.na(prevalence) & prevalence > 0.05 & prevalence < 0.10 ~ 2.5,
-        !input$prevalence ~ 0.5,
+        !input$prevalence ~ 0.2,
         TRUE ~ 4.0
       ))
       # mutate(stroke = ifelse(input$prevalence & !is.na(prevalence), 0.5 + 3 * sqrt(prevalence), 1.0))
