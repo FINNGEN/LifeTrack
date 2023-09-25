@@ -381,7 +381,7 @@ server <- function(input, output, session){
       "MOTHER_FINNGENID AS FINNGENID, ",
       "'BIRTH', ",
       "MOTHER_AGE AS EVENT_AGE, ",
-      "APPROX_DELIVERY_DATE AS APPROX_EVENT_DAY, ",
+      "APPROX_BIRTH_DATE AS APPROX_EVENT_DAY, ", # APPROX_DELIVERY_DATE / APPROX_BIRTH_DATE
       "SDIAG1 AS CODE1, ",
       "NULL, ",
       "NULL, ",
