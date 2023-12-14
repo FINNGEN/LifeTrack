@@ -183,9 +183,11 @@ build_plot_values <- function(df_all, values){
       str_starts(vocabulary_id, "NCSP") & 
         str_detect(FG_CODE1, "^SD(A|C|D|E)|^SF(A|B|C|D|E)") ~ "NCSP_teeth_2_basic",
       str_starts(vocabulary_id, "NCSP") & 
-        str_detect(FG_CODE1, "^SG(A|B|C|D)|^EB(A|B|U|W)") ~ "NCSP_teeth_3_major",
+        str_detect(FG_CODE1, "^SG(A|B|C|D)|^EB(A|B|U|W)|^WX") ~ "NCSP_teeth_3_major",
       str_starts(vocabulary_id, "NCSP") & 
-        str_detect(FG_CODE1, "^SH(A|B|C)|^SJ(B|C|D|E|F|X)|^SP(A|B|C|D|E|F|G)|^SXC|^OIK") ~ "NCSP_teeth_4_other",
+        str_detect(FG_CODE1, "^SJ(B|C|D|E|F|X)|^SP(A|B|C|D|E|F|G)") ~ "NCSP_teeth_4_prosthetics",
+      str_starts(vocabulary_id, "NCSP") & 
+        str_detect(FG_CODE1, "^SH(A|B|C)|^SJ(B|C|D|E|F|X)|^SP(A|B|C|D|E|F|G)|^SXC|^OIK") ~ "NCSP_teeth_5_other",
       str_starts(vocabulary_id, "NCSP") ~ "NCSP",
       str_starts(vocabulary_id, "HPN") ~ "HPN",
       str_starts(vocabulary_id, "HPO") ~ "HPO",
@@ -202,13 +204,14 @@ build_plot_values <- function(df_all, values){
       str_detect(vocabulary_id, "FHL") ~ 8,
       str_starts(vocabulary_id, "ICPC") ~ 9,
       str_starts(vocabulary_id, "HPN") ~ 10,
-      vocabulary_id == "NCSP_teeth_4_other" ~ 12,
-      vocabulary_id == "NCSP_teeth_3_major" ~ 13,
-      vocabulary_id == "NCSP_teeth_2_basic" ~ 14,
-      vocabulary_id == "NCSP_teeth_1_preventive" ~ 15,
+      vocabulary_id == "NCSP_teeth_5_other" ~ 12,
+      vocabulary_id == "NCSP_teeth_4_prosthetics" ~ 13,
+      vocabulary_id == "NCSP_teeth_3_major" ~ 14,
+      vocabulary_id == "NCSP_teeth_2_basic" ~ 15,
+      vocabulary_id == "NCSP_teeth_1_preventive" ~ 16,
       str_starts(vocabulary_id, "NCSP") ~ 11,
-      str_starts(vocabulary_id, "HPO") ~ 16,
-      str_starts(vocabulary_id, "SPAT") ~ 17,
+      str_starts(vocabulary_id, "HPO") ~ 17,
+      str_starts(vocabulary_id, "SPAT") ~ 18,
       TRUE ~ 0 # "Unclassified"
     ))
   
@@ -262,7 +265,8 @@ build_plot_values <- function(df_all, values){
       chapter == "NCSP_teeth_1_preventive" ~ "Dental Procedure: preventive (NCSP)",
       chapter == "NCSP_teeth_2_basic" ~ "Dental Procedure: basic (NCSP)",
       chapter == "NCSP_teeth_3_major" ~ "Dental Procedure: major (NCSP)",
-      chapter == "NCSP_teeth_4_other" ~ "Dental Procedure: other (NCSP)",
+      chapter == "NCSP_teeth_4_prosthetics" ~ "Dental Procedure: orthodontics and prosthetics (NCSP)",
+      chapter == "NCSP_teeth_5_other" ~ "Dental Procedure: other (NCSP)",
       chapter == "ICD8or9" ~ "ICD8 or ICD9",
       SOURCE == "BIRTH" ~ "Birth Registry",
       SOURCE == "CANC" ~ "Cancer Registry",
