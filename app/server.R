@@ -179,13 +179,13 @@ build_plot_values <- function(df_all, values){
       str_starts(vocabulary_id, "SPAT") ~ "SPAT",
       str_starts(vocabulary_id, "ICPC") ~ "ICPC",
       str_starts(vocabulary_id, "NCSP") & 
-        str_detect(FG_CODE1, "^SA(A|B|C|D|E)|^SB(A|B)|^SC(A|E|G)") ~ "NCSP_teeth_preventive",
+        str_detect(FG_CODE1, "^SA(A|B|C|D|E)|^SB(A|B)|^SC(A|E|G)") ~ "NCSP_teeth_1_preventive",
       str_starts(vocabulary_id, "NCSP") & 
-        str_detect(FG_CODE1, "^SD(A|C|D|E)|^SF(A|B|C|D|E)") ~ "NCSP_teeth_basic",
+        str_detect(FG_CODE1, "^SD(A|C|D|E)|^SF(A|B|C|D|E)") ~ "NCSP_teeth_2_basic",
       str_starts(vocabulary_id, "NCSP") & 
-        str_detect(FG_CODE1, "^SG(A|B|C|D)|^EB(A|B|U|W)") ~ "NCSP_teeth_major",
+        str_detect(FG_CODE1, "^SG(A|B|C|D)|^EB(A|B|U|W)") ~ "NCSP_teeth_3_major",
       str_starts(vocabulary_id, "NCSP") & 
-        str_detect(FG_CODE1, "^SH(A|B|C)|^SJ(B|C|D|E|F|X)|^SP(A|B|C|D|E|F|G)|^SXC|^OIK") ~ "NCSP_teeth_other",
+        str_detect(FG_CODE1, "^SH(A|B|C)|^SJ(B|C|D|E|F|X)|^SP(A|B|C|D|E|F|G)|^SXC|^OIK") ~ "NCSP_teeth_4_other",
       str_starts(vocabulary_id, "NCSP") ~ "NCSP",
       str_starts(vocabulary_id, "HPN") ~ "HPN",
       str_starts(vocabulary_id, "HPO") ~ "HPO",
@@ -202,10 +202,10 @@ build_plot_values <- function(df_all, values){
       str_detect(vocabulary_id, "FHL") ~ 8,
       str_starts(vocabulary_id, "ICPC") ~ 9,
       str_starts(vocabulary_id, "HPN") ~ 10,
-      vocabulary_id == "NCSP_teeth_other" ~ 12,
-      vocabulary_id == "NCSP_teeth_major" ~ 13,
-      vocabulary_id == "NCSP_teeth_basic" ~ 14,
-      vocabulary_id == "NCSP_teeth_preventive" ~ 15,
+      vocabulary_id == "NCSP_teeth_4_other" ~ 12,
+      vocabulary_id == "NCSP_teeth_3_major" ~ 13,
+      vocabulary_id == "NCSP_teeth_2_basic" ~ 14,
+      vocabulary_id == "NCSP_teeth_1_preventive" ~ 15,
       str_starts(vocabulary_id, "NCSP") ~ 11,
       str_starts(vocabulary_id, "HPO") ~ 16,
       str_starts(vocabulary_id, "SPAT") ~ 17,
@@ -259,10 +259,10 @@ build_plot_values <- function(df_all, values){
       str_length(chapter) == 4 & chapter == "SPAT" ~ "Procedure (SPAT)",
       str_length(chapter) == 4 & chapter == "ICPC" ~ "Reason for visit (ICPC)",
       str_length(chapter) == 4 & chapter == "NCSP" ~ "Nordic Classification of Surgical Procedures (NCSP)",
-      chapter == "NCSP_teeth_preventive" ~ "Dental Procedure 1 (preventive)",
-      chapter == "NCSP_teeth_basic" ~ "Dental Procedure 2 (basic)",
-      chapter == "NCSP_teeth_major" ~ "Dental Procedure 3 (major)",
-      chapter == "NCSP_teeth_other" ~ "Dental Procedure 4 (other)",
+      chapter == "NCSP_teeth_1_preventive" ~ "Dental Procedure: preventive (NCSP)",
+      chapter == "NCSP_teeth_2_basic" ~ "Dental Procedure: basic (NCSP)",
+      chapter == "NCSP_teeth_3_major" ~ "Dental Procedure: major (NCSP)",
+      chapter == "NCSP_teeth_4_other" ~ "Dental Procedure: other (NCSP)",
       chapter == "ICD8or9" ~ "ICD8 or ICD9",
       SOURCE == "BIRTH" ~ "Birth Registry",
       SOURCE == "CANC" ~ "Cancer Registry",
@@ -277,9 +277,9 @@ build_plot_values <- function(df_all, values){
     mutate(SOURCE = factor(SOURCE)) |> 
     arrange(ORDER, desc(chapter), CLASSIFICATION) |> 
     arrange(desc(CLASSIFICATION == "Unclassified")) |> 
-    mutate(y_order = row_number()) |> 
-    mutate(CLASSIFICATION = fct_reorder(CLASSIFICATION, y_order)) |> 
-    mutate(X_label = fct_reorder(str_wrap(CLASSIFICATION, 30), y_order)) |> 
+    mutate(y_order = row_number()) |>
+    mutate(CLASSIFICATION = fct_reorder(CLASSIFICATION, y_order)) |>
+    mutate(X_label = fct_reorder(str_wrap(CLASSIFICATION, 30), y_order)) |>
     mutate(data_id = case_when(
       is.na(INDEX) | INDEX == '' ~ paste0(row_number(), '_BIRTH'),
       TRUE ~ INDEX
