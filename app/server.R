@@ -181,9 +181,9 @@ build_plot_values <- function(df_all, values){
       str_starts(vocabulary_id, "NCSP") & 
         str_detect(FG_CODE1, "^SA(A|B|C|D|E)|^SB(A|B)|^SC(A|E|G)") ~ "NCSP_teeth_1_preventive",
       str_starts(vocabulary_id, "NCSP") & 
-        str_detect(FG_CODE1, "^SD(A|C|D|E)|^SF(A|B|C|D|E)") ~ "NCSP_teeth_2_basic",
+        str_detect(FG_CODE1, "^SD(A|C|D|E)|^SF(A|B|C|D|E)|^EB(1|2)") ~ "NCSP_teeth_2_basic",
       str_starts(vocabulary_id, "NCSP") & 
-        str_detect(FG_CODE1, "^SG(A|B|C|D)|^EB(A|B|U|W)|^WX") ~ "NCSP_teeth_3_major",
+        str_detect(FG_CODE1, "^SG(A|B|C|D)|^EB(A|B|U|W)") ~ "NCSP_teeth_3_major",
       str_starts(vocabulary_id, "NCSP") & 
         str_detect(FG_CODE1, "^SJ(B|C|D|E|F|X)|^SP(A|B|C|D|E|F|G)") ~ "NCSP_teeth_4_prosthetics",
       str_starts(vocabulary_id, "NCSP") & 

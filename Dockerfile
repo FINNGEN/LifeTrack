@@ -28,7 +28,6 @@ RUN apt-get install -y postgresql
 
 # java runtime
 RUN apt-get install -y default-jdk
-CMD javareconf # not needed?
 
 # timezone
 ENV TZ=Europe/Helsinki
