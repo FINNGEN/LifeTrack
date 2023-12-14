@@ -79,9 +79,15 @@ shinyUI(
                         uiOutput('upload_cohort_ui')
                     ),
                     div(style = "margin-top:-30px; margin-bottom: -5px; ",
-                        selectizeInput("person", label = "Person", width = "100%", 
-                                       choices = NULL, 
-                                       options = list(multiple = FALSE, placeholder = 'Select ID', closeAfterSelect = TRUE))
+                        selectizeInput("person", label = "Person", width = "100%",
+                                       choices = NULL,
+                                       options = list(multiple = FALSE,
+                                                      placeholder = 'Select ID',
+                                                      closeAfterSelect = TRUE,
+                                                      maxOptions = 100000L
+                                       )
+                        )
+                        # uiOutput("select_person_ui")
                     ),
                     div(style = "margin-top: +15px; margin-bottom: -25px; display: flex; ",
                         checkboxInput("hide_visited", label = "Hide visited", value = FALSE)

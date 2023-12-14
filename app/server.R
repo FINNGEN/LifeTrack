@@ -55,16 +55,16 @@ switch(HOST,
          VERSION <- system2("gitversion", args = c("/showVariable", "SemVer"), stdout = TRUE)
          # data tables
          longitudinal_data_table <-
-           "atlas-development-270609.sandbox_tools_r11.finngen_r11_service_sector_detailed_longitudinal_v1"
+           "atlas-development-270609.sandbox_tools_r12.finngen_r12_service_sector_detailed_longitudinal_v1"
          minimum_data_table <-
-           "atlas-development-270609.sandbox_tools_r11.finngenid_info_r11_v1"
+           "atlas-development-270609.sandbox_tools_r12.minimum_extended_r12_v1"
          fg_codes_info_table <-
            "atlas-development-270609.medical_codes.fg_codes_info_v5"
          code_prevalence_table <- 
-           "atlas-development-270609.sandbox_tools_r11.code_prevalence_stratified_v3"
+           "atlas-development-270609.sandbox_tools_r12.code_prevalence_stratified_r12_v1"
          # "atlas-development-270609.sandbox_tools_r11.code_prevalence_stratified_r11_v1"
          birth_table <- 
-           "atlas-development-270609.sandbox_tools_r11.birth_mother_r11_v1"
+           "atlas-development-270609.sandbox_tools_r12.birth_mother_r12_v1"
        },
        'MAC_DOCKER' = {
          projectid <- "atlas-development-270609"
@@ -178,6 +178,14 @@ build_plot_values <- function(df_all, values){
       str_detect(vocabulary_id, "FHL") ~ "FHL",
       str_starts(vocabulary_id, "SPAT") ~ "SPAT",
       str_starts(vocabulary_id, "ICPC") ~ "ICPC",
+      str_starts(vocabulary_id, "NCSP") & 
+        str_detect(FG_CODE1, "^SA(A|B|C|D|E)|^SB(A|B)|^SC(A|E|G)") ~ "NCSP_teeth_preventive",
+      str_starts(vocabulary_id, "NCSP") & 
+        str_detect(FG_CODE1, "^SD(A|C|D|E)|^SF(A|B|C|D|E)") ~ "NCSP_teeth_basic",
+      str_starts(vocabulary_id, "NCSP") & 
+        str_detect(FG_CODE1, "^SG(A|B|C|D)|^EB(A|B|U|W)") ~ "NCSP_teeth_major",
+      str_starts(vocabulary_id, "NCSP") & 
+        str_detect(FG_CODE1, "^SH(A|B|C)|^SJ(B|C|D|E|F|X)|^SP(A|B|C|D|E|F|G)|^SXC|^OIK") ~ "NCSP_teeth_other",
       str_starts(vocabulary_id, "NCSP") ~ "NCSP",
       str_starts(vocabulary_id, "HPN") ~ "HPN",
       str_starts(vocabulary_id, "HPO") ~ "HPO",
@@ -194,11 +202,16 @@ build_plot_values <- function(df_all, values){
       str_detect(vocabulary_id, "FHL") ~ 8,
       str_starts(vocabulary_id, "ICPC") ~ 9,
       str_starts(vocabulary_id, "HPN") ~ 10,
+      vocabulary_id == "NCSP_teeth_other" ~ 12,
+      vocabulary_id == "NCSP_teeth_major" ~ 13,
+      vocabulary_id == "NCSP_teeth_basic" ~ 14,
+      vocabulary_id == "NCSP_teeth_preventive" ~ 15,
       str_starts(vocabulary_id, "NCSP") ~ 11,
-      str_starts(vocabulary_id, "HPO") ~ 12,
-      str_starts(vocabulary_id, "SPAT") ~ 13,
+      str_starts(vocabulary_id, "HPO") ~ 16,
+      str_starts(vocabulary_id, "SPAT") ~ 17,
       TRUE ~ 0 # "Unclassified"
     ))
+  
   
   df_all <- df_all |>
     mutate(CLASSIFICATION = case_when(
@@ -246,6 +259,10 @@ build_plot_values <- function(df_all, values){
       str_length(chapter) == 4 & chapter == "SPAT" ~ "Procedure (SPAT)",
       str_length(chapter) == 4 & chapter == "ICPC" ~ "Reason for visit (ICPC)",
       str_length(chapter) == 4 & chapter == "NCSP" ~ "Nordic Classification of Surgical Procedures (NCSP)",
+      chapter == "NCSP_teeth_preventive" ~ "Dental Procedure 1 (preventive)",
+      chapter == "NCSP_teeth_basic" ~ "Dental Procedure 2 (basic)",
+      chapter == "NCSP_teeth_major" ~ "Dental Procedure 3 (major)",
+      chapter == "NCSP_teeth_other" ~ "Dental Procedure 4 (other)",
       chapter == "ICD8or9" ~ "ICD8 or ICD9",
       SOURCE == "BIRTH" ~ "Birth Registry",
       SOURCE == "CANC" ~ "Cancer Registry",
@@ -331,9 +348,9 @@ build_plot_values <- function(df_all, values){
 
 server <- function(input, output, session){
   
-  visited_persons <- NULL
-  cohort <- NULL
-  cohort_saved <- NULL
+  visited_persons <- ""
+  cohort <- ""
+  cohort_saved <- ""
   person <- ""
 
   # reactive data
@@ -381,7 +398,7 @@ server <- function(input, output, session){
       "MOTHER_FINNGENID AS FINNGENID, ",
       "'BIRTH', ",
       "MOTHER_AGE AS EVENT_AGE, ",
-      "APPROX_BIRTH_DATE AS APPROX_EVENT_DAY, ", # APPROX_DELIVERY_DATE / APPROX_BIRTH_DATE
+      "APPROX_DELIVERY_DATE AS APPROX_EVENT_DAY, ", 
       "SDIAG1 AS CODE1, ",
       "NULL, ",
       "NULL, ",
@@ -432,6 +449,17 @@ server <- function(input, output, session){
               )
     )
   })
+  
+  # output$select_person_ui <- renderUI({
+  #   selectizeInput("person", label = "Person", width = "100%", 
+  #                  choices = NULL, 
+  #                  options = list(multiple = FALSE, 
+  #                                 placeholder = 'Select ID', 
+  #                                 closeAfterSelect = TRUE,
+  #                                 maxOptions = 100000L
+  #                  )
+  #   )
+  # })
   
   observeEvent(input$upload_cohort, {
     log_entry("reading cohort:", input$upload_cohort$name)
@@ -498,7 +526,9 @@ server <- function(input, output, session){
     visited_persons <<- c(visited_persons, person)
     if(input$hide_visited){
       cohort <<- setdiff(cohort, visited_persons)
-      updateSelectizeInput(session, "person", choices = cohort, selected = character(0), server = TRUE)
+      # message(toString(cohort))
+      # update should be done server-side, "server = TRUE", but in the current version it does not work
+      updateSelectizeInput(session, "person", choices = cohort, selected = character(0), server = FALSE)
     } else {
       updateSelectizeInput(session, "person", selected = character(0))
     }
@@ -682,6 +712,9 @@ server <- function(input, output, session){
     # build the points
     build_plot_values(df_all, values)
     values$df_all <- df_all
+    
+    # View(df_all)
+    # browser()
     
     # apply filters to fetched data
     
