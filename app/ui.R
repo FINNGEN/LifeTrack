@@ -110,6 +110,15 @@ shinyUI(
                     div(style = "margin-top:-20px; margin-bottom: -0px; ",
                         textInput("entry_regexp", "Entry highlight filter (regex)", value = "")
                     ),
+                    div(style = "margin-top: -20px; margin-left:20px; margin-right:20px;",
+                        sliderInput("category_range",
+                                    "Category range", 
+                                    min = 1,
+                                    max = 24,
+                                    value = c(1, 24)
+                        )
+                    ),
+                    
                     div(style = "margin-top:-5px; margin-bottom: -0px; display: flex; ",
                         div(actionButton("filter_data", "Filter")),
                         div(actionButton("reset_filter", "Reset"))

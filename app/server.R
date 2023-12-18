@@ -134,7 +134,7 @@ df_register_spans <- tribble(
   ~SOURCE, ~START_DATE, ~COLOR, 
   "PURCH", ymd("1995-01-01"), "#6fcb6c",
   "REIMB", ymd("1964-01-01"), "#ab172b",
-  "PRIM_OUT", ymd("2011-01-01"), "#c200c6", # "#fdc3ac",
+  "PRIM_OUT", ymd("2011-01-01"), "#c200c6", 
   "INPAT", ymd("1969-01-01"), "#ff4e31",
   "OUTPAT", ymd("1998-01-01"),  "#ad86b7",
   "CANC", ymd("1953-01-01"), "#c1c8c8",
@@ -769,7 +769,13 @@ server <- function(input, output, session){
     
     # filter according to date range
     df_all <- values$df_all |> 
-      filter(APPROX_EVENT_DAY >= input$date_range[1] & APPROX_EVENT_DAY <= input$date_range[2])
+      filter(APPROX_EVENT_DAY >= input$date_range[1] & APPROX_EVENT_DAY <= input$date_range[2]) |> 
+      filter(
+        is.na(CATEGORY) | 
+          str_replace(CATEGORY, "[A-Z]*", "") >= input$category_range[1] & 
+          str_replace(CATEGORY, "[A-Z]*", "") <= input$category_range[2]
+      )
+    
     if(nrow(df_all) != nrow(values$df_all))
       build_plot_values(df_all, values)
     
