@@ -162,8 +162,19 @@ showModalProgress <- function(..., title = NULL, footer = modalButton("OK")){
 #
 # build_plot_values ####
 #
-# - assigns the data into categories and classes
-#
+#' - assigns the data into categories and classes
+#' - transforms df_all -> df_points
+#'
+#'  in: 
+#'    df_all (raw data)
+#'    values (reactive structure)
+#'  
+#'  out: 
+#'    values$df_height
+#!    values$df_labels
+#!    values$df_register_start
+#!    values$df_points
+
 
 build_plot_values <- function(df_all, values){
   df_all <- df_all |> 
@@ -366,7 +377,8 @@ server <- function(input, output, session){
     df_register_start = NULL,
     df_minimum = NULL,
     df_selected = NULL,
-    date_range = NULL
+    date_range = NULL, 
+    category_range = NULL
   )
   
   reset_values <- function(){
@@ -379,6 +391,7 @@ server <- function(input, output, session){
     values$df_points <- NULL
     values$df_selected <- NULL
     values$date_range <- NULL
+    values$category_range <- NULL
   }
   
   get_all_data <- function(finngenid){
@@ -652,6 +665,8 @@ server <- function(input, output, session){
                       value = c(df_timespan$DATE_MIN, df_timespan$DATE_MAX)
     )
     values$date_range <- c(df_timespan$DATE_MIN, df_timespan$DATE_MAX)
+    
+    values$category_range <- c(1, 50)
  
     # clean up the translations
     df_all <- df_all |> 
@@ -762,21 +777,26 @@ server <- function(input, output, session){
   
   observeEvent(input$filter_data, {
     log_entry("filter changed")
-
+    
     if(is.null(values$df_all)) return()
     
     shinyjs::runjs("window.scrollTo(0, 0)")
     
     # filter according to date range
     df_all <- values$df_all |> 
+      mutate(TEST = str_replace(CATEGORY, "[A-Z]*", "")) |> 
       filter(APPROX_EVENT_DAY >= input$date_range[1] & APPROX_EVENT_DAY <= input$date_range[2]) |> 
       filter(
-        is.na(CATEGORY) | 
-          str_replace(CATEGORY, "[A-Z]*", "") >= input$category_range[1] & 
-          str_replace(CATEGORY, "[A-Z]*", "") <= input$category_range[2]
+        is.na(CATEGORY) | (
+          as.numeric(str_replace(CATEGORY, "[A-Z]*", "")) >= input$category_range[1] 
+          & as.numeric(str_replace(CATEGORY, "[A-Z]*", "") <= input$category_range[2])
+        )
       )
     
-    if(nrow(df_all) != nrow(values$df_all))
+    # View(select(df_all, CATEGORY, TEST))
+    # browser()
+    
+    if(nrow(df_all) != nrow(values$df_points))
       build_plot_values(df_all, values)
     
     class_regexp <- str_trim(input$class_regexp)
@@ -828,7 +848,8 @@ server <- function(input, output, session){
     updateTextInput(session, "entry_regexp", value = "")
     updateTextInput(session, "class_regexp", value = "")
     updateSliderInput(session, "date_range", value = values$date_range)
-
+    updateSliderInput(session, "category_range", value = values$category_range)
+    
     if(is.null(values$df_all)) return()
     
     build_plot_values(values$df_all, values)

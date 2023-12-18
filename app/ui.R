@@ -114,8 +114,8 @@ shinyUI(
                         sliderInput("category_range",
                                     "Category range", 
                                     min = 1,
-                                    max = 24,
-                                    value = c(1, 24)
+                                    max = 50,
+                                    value = c(1, 50)
                         )
                     ),
                     
