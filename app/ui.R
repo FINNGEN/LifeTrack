@@ -113,9 +113,9 @@ shinyUI(
                     div(style = "margin-top: -20px; margin-left:20px; margin-right:20px;",
                         sliderInput("category_range",
                                     "Category range", 
-                                    min = 1,
-                                    max = 50,
-                                    value = c(1, 50)
+                                    min = CATEGORY_MIN,
+                                    max = CATEGORY_MAX,
+                                    value = c(CATEGORY_MIN, CATEGORY_MAX)
                         )
                     ),
                     

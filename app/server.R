@@ -666,7 +666,7 @@ server <- function(input, output, session){
     )
     values$date_range <- c(df_timespan$DATE_MIN, df_timespan$DATE_MAX)
     
-    values$category_range <- c(1, 50)
+    values$category_range <- c(CATEGORY_MIN, CATEGORY_MAX)
  
     # clean up the translations
     df_all <- df_all |> 
@@ -782,18 +782,21 @@ server <- function(input, output, session){
     
     shinyjs::runjs("window.scrollTo(0, 0)")
     
-    # filter according to date range
+    # filter according to date range and the number in category
     df_all <- values$df_all |> 
-      mutate(TEST = str_replace(CATEGORY, "[A-Z]*", "")) |> 
       filter(APPROX_EVENT_DAY >= input$date_range[1] & APPROX_EVENT_DAY <= input$date_range[2]) |> 
+      # get rid of the BIRTH data, "PARITY/NRO = 1/2"
+      mutate(CAT = str_replace(CATEGORY, "PARITY.*", "")) |> 
+      mutate(CAT = str_replace(CAT, "[A-Z]*", "")) |> 
       filter(
-        is.na(CATEGORY) | (
-          as.numeric(str_replace(CATEGORY, "[A-Z]*", "")) >= input$category_range[1] 
-          & as.numeric(str_replace(CATEGORY, "[A-Z]*", "") <= input$category_range[2])
+        is.na(CAT) | CAT == "" | (
+          !is.na(CAT)
+          & as.numeric(CAT) >= as.numeric(input$category_range[1])
+          & as.numeric(CAT) <= as.numeric(input$category_range[2])
         )
       )
     
-    # View(select(df_all, CATEGORY, TEST))
+    # View(select(df_all, CATEGORY, CAT))
     # browser()
     
     if(nrow(df_all) != nrow(values$df_points))
