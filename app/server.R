@@ -1125,8 +1125,8 @@ server <- function(input, output, session){
   # handle window close ####
   onStop(function() {
     log_entry("window close")
-    # remove global vars
-    # rm(df_prevalence, df_register_spans, envir = .GlobalEnv)
+    # remove global vars/constants
+    rm(CATEGORY_MIN, CATEGORY_MAX, envir = .GlobalEnv)
     stopApp()
   }, session)
   
