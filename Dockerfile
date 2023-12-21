@@ -59,14 +59,14 @@ RUN R -e "remotes::install_github('javier-gracia-tabuenca-tuni/HadesExtras')"
 RUN R -e "remotes::install_github('FINNGEN/FinnGenUtilsR')"
 
 # run as root
-COPY app/ .
+ADD app/ /root
 
 # set up Renviron
 ARG VERSION
 RUN echo 'VERSION='$VERSION >> /root/.Renviron
 
 # run app
-ENTRYPOINT ["/usr/local/bin/R", "-e", "shiny::runApp('.', host = '0.0.0.0', port = 8559)"]
+ENTRYPOINT ["/usr/local/bin/R", "-e", "shiny::runApp('/root', host = '0.0.0.0', port = 8559)"]
 
 ## login as root into running container
 #

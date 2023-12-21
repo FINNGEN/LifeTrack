@@ -53,6 +53,8 @@ switch(HOST,
          projectid <- "atlas-development-270609"
          bq_auth(path = "bq_auth/atlas-development-270609-0c4bdf74dad0.json")
          VERSION <- system2("gitversion", args = c("/showVariable", "SemVer"), stdout = TRUE)
+         # directory for saved SVG plots
+         SNAPSHOT_DIR <- "~/LifeTrack_plots/"
          # data tables
          longitudinal_data_table <-
            "atlas-development-270609.sandbox_tools_r12.finngen_r12_service_sector_detailed_longitudinal_v1"
@@ -73,17 +75,19 @@ switch(HOST,
          # deactivate https
          httr::set_config(httr::config(ssl_verifypeer=FALSE))
          VERSION <- Sys.getenv("VERSION")
+         # directory for saved SVG plots
+         SNAPSHOT_DIR <- "~/LifeTrack_plots/"
          # data tables
          longitudinal_data_table <-
-           "atlas-development-270609.sandbox_tools_r11.finngen_r11_service_sector_detailed_longitudinal_v1"
+           "atlas-development-270609.sandbox_tools_r12.finngen_r12_service_sector_detailed_longitudinal_v1"
          minimum_data_table <-
-           "atlas-development-270609.sandbox_tools_r11.finngenid_info_r11_v1"
+           "atlas-development-270609.sandbox_tools_r12.minimum_extended_r12_v1"
          fg_codes_info_table <-
            "atlas-development-270609.medical_codes.fg_codes_info_v5"
          code_prevalence_table <- 
-           "atlas-development-270609.sandbox_tools_r11.code_prevalence_stratified_v3"
+           "atlas-development-270609.sandbox_tools_r12.code_prevalence_stratified_r12_v1"
          birth_table <- 
-           "atlas-development-270609.sandbox_tools_r11.birth_mother_r11_v1"
+           "atlas-development-270609.sandbox_tools_r12.birth_mother_r12_v1"
        },
        'SANDBOX' = {
          # RStudio sanitizes BUCKET_SANDBOX_IVM away, must be hard-coded
@@ -109,6 +113,7 @@ switch(HOST,
          options(gargle_oauth_cache=FALSE) #to avoid the question that freezes the app
          bigrquery::bq_auth(scopes = "https://www.googleapis.com/auth/bigquery")
          httr::set_config(httr::config(ssl_verifypeer=FALSE))
+         SNAPSHOT_DIR <- "~/LifeTrack_plots/"
          # data tables
          longitudinal_data_table <-
            "finngen-production-library.sandbox_tools_r12.finngen_r12_service_sector_detailed_longitudinal_v1"
@@ -128,6 +133,14 @@ switch(HOST,
 )
 
 log_entry("VERSION", VERSION)
+
+# check if SNAPSHOT_DIR exits
+if(!dir.exists(SNAPSHOT_DIR)){
+  log_entry("creating the SNAPSHOT_DIR")
+  dir.create(SNAPSHOT_DIR, mode = "0777")
+} else {
+  log_entry("the SNAPSHOT_DIR exits")
+}
 
 # register time spans and color
 df_register_spans <- tribble(
@@ -367,6 +380,7 @@ server <- function(input, output, session){
   cohort <- ""
   cohort_saved <- ""
   person <- ""
+  initial_plot_of_person <- FALSE
 
   # reactive data
   values <- reactiveValues(
@@ -415,7 +429,7 @@ server <- function(input, output, session){
       "MOTHER_FINNGENID AS FINNGENID, ",
       "'BIRTH', ",
       "MOTHER_AGE AS EVENT_AGE, ",
-      "APPROX_DELIVERY_DATE AS APPROX_EVENT_DAY, ", 
+      "APPROX_DELIVERY_DATE AS APPROX_EVENT_DAY, ", # APPROX_BIRTH_DATE / APPROX_DELIVERY_DATE
       "SDIAG1 AS CODE1, ",
       "NULL, ",
       "NULL, ",
@@ -539,6 +553,8 @@ server <- function(input, output, session){
     shinyjs::runjs("window.scrollTo(0, 0)")
     
     person <<- input$person
+    
+    initial_plot_of_person <<- TRUE
     
     visited_persons <<- c(visited_persons, person)
     if(input$hide_visited){
@@ -1090,6 +1106,18 @@ server <- function(input, output, session){
              )
            )
     )
+    
+    if(initial_plot_of_person){
+      filename <- paste0(SNAPSHOT_DIR, person, ".html")
+      if(file.exists(filename)){
+        log_entry("removing", filename)
+        file.remove(filename)
+      }
+      log_entry("saving", filename)
+      htmltools::save_html(gg_girafe, filename)
+      initial_plot_of_person <<- FALSE
+    }
+    
     log_entry("return SVG object")
     return(gg_girafe)
   })
