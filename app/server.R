@@ -380,7 +380,6 @@ server <- function(input, output, session){
   cohort <- ""
   cohort_saved <- ""
   person <- ""
-  initial_plot_of_person <- FALSE
 
   # reactive data
   values <- reactiveValues(
@@ -553,8 +552,6 @@ server <- function(input, output, session){
     shinyjs::runjs("window.scrollTo(0, 0)")
     
     person <<- input$person
-    
-    initial_plot_of_person <<- TRUE
     
     visited_persons <<- c(visited_persons, person)
     if(input$hide_visited){
@@ -1107,17 +1104,19 @@ server <- function(input, output, session){
            )
     )
     
-    if(initial_plot_of_person){
-      filename <- paste0(SNAPSHOT_DIR, person, ".html")
-      if(file.exists(filename)){
-        log_entry("removing", filename)
-        file.remove(filename)
-      }
-      log_entry("saving", filename)
-      htmltools::save_html(gg_girafe, filename)
-      initial_plot_of_person <<- FALSE
+    #
+    # save the SVG plot into ~/LifeTrack_plots/
+    #
+    plot_time <- Sys.time()
+    filename <- paste0(SNAPSHOT_DIR, person, ".html")
+    if(file.exists(filename)){
+      log_entry("removing", filename)
+      file.remove(filename)
     }
-    
+    log_entry("saving", filename)
+    htmltools::save_html(gg_girafe, filename)
+    print(Sys.time() - plot_time)
+
     log_entry("return SVG object")
     return(gg_girafe)
   })
