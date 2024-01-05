@@ -2,8 +2,9 @@
 # R with tidyverse
 #
 
-FROM rocker/r-ver:4.3.0
-ARG REPO='https://packagemanager.rstudio.com/cran/__linux__/jammy/2023-05-03'
+FROM rocker/r-ver:4.2.3
+#ARG REPO='https://packagemanager.rstudio.com/cran/__linux__/jammy/2023-05-03'
+ARG REPO='https://packagemanager.posit.co/cran/__linux__/jammy/2023-04-14'
 
 LABEL maintainer="harri.siirtola@tuni.fi"
 
@@ -26,41 +27,46 @@ RUN apt-get install -y libpq-dev
 RUN apt-get install -y postgresql
 
 # java runtime
-RUN apt-get install -y default-jre
-# RUN CMD javareconf # not needed?
+RUN apt-get install -y default-jdk
 
 # timezone
 ENV TZ=Europe/Helsinki
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-RUN R -e "install.packages('tidyverse', repos = '$REPO' )"
-RUN R -e "install.packages('shiny', repos ='$REPO')"
-RUN R -e "install.packages('shinydashboard', repos ='$REPO')"
-RUN R -e "install.packages('shinycssloaders', repos ='$REPO')"
-RUN R -e "install.packages('shinyWidgets', repos ='$REPO')"
-RUN R -e "install.packages('shinybusy', repos ='$REPO')"
-RUN R -e "install.packages('colourpicker', repos ='$REPO')"
-RUN R -e "install.packages('sodium', repos ='$REPO')"
-RUN R -e "install.packages('bigrquery', repos ='$REPO')"
-RUN R -e "install.packages('checkmate', repos ='$REPO')"
-RUN R -e "install.packages('SqlRender', repos ='$REPO')"
-RUN R -e "install.packages('ggpubr', repos ='$REPO')"
-RUN R -e "install.packages('ggiraph', repos ='$REPO')"
-RUN R -e "install.packages('DT', repos ='$REPO')"
+RUN R -e "install.packages('tidyverse', repos = '$REPO', dependencies = TRUE)"
+RUN R -e "install.packages('shiny', repos ='$REPO', dependencies = TRUE)"
+RUN R -e "install.packages('shinydashboard', repos ='$REPO', dependencies = TRUE)"
+RUN R -e "install.packages('shinycssloaders', repos ='$REPO', dependencies = TRUE)"
+RUN R -e "install.packages('shinyWidgets', repos ='$REPO', dependencies = TRUE)"
+RUN R -e "install.packages('shinybusy', repos ='$REPO', dependencies = TRUE)"
+RUN R -e "install.packages('colourpicker', repos ='$REPO', dependencies = TRUE)"
+RUN R -e "install.packages('sodium', repos ='$REPO', dependencies = TRUE)"
+RUN R -e "install.packages('bigrquery', repos ='$REPO', dependencies = TRUE)"
+RUN R -e "install.packages('checkmate', repos ='$REPO', dependencies = TRUE)"
+RUN R -e "install.packages('SqlRender', repos ='$REPO', dependencies = TRUE)"
+RUN R -e "install.packages('ggpubr', repos ='$REPO', dependencies = TRUE)"
+RUN R -e "install.packages('ggiraph', repos ='$REPO', dependencies = TRUE)"
+RUN R -e "install.packages('DT', repos ='$REPO', dependencies = TRUE)"
 
-# FinnGenUtilsR
+# github
 RUN R -e "install.packages('remotes')"
+RUN R -e "remotes::install_github('OHDSI/CohortGenerator@main')"
+RUN R -e "remotes::install_github('ohdsi/Eunomia@main')"
+RUN R -e "remotes::install_github('OHDSI/FeatureExtraction@main')"
+RUN R -e "remotes::install_github('OHDSI/ResultModelManager@main')"
+RUN R -e "remotes::install_github('ohdsi/ROhdsiWebApi@main')"
+RUN R -e "remotes::install_github('javier-gracia-tabuenca-tuni/HadesExtras')"
 RUN R -e "remotes::install_github('FINNGEN/FinnGenUtilsR')"
 
 # run as root
-COPY app/ .
+ADD app/ /root
 
 # set up Renviron
 ARG VERSION
 RUN echo 'VERSION='$VERSION >> /root/.Renviron
 
 # run app
-ENTRYPOINT ["/usr/local/bin/R", "-e", "shiny::runApp('.', host = '0.0.0.0', port = 8559)"]
+ENTRYPOINT ["/usr/local/bin/R", "-e", "shiny::runApp('/root', host = '0.0.0.0', port = 8559)"]
 
 ## login as root into running container
 #

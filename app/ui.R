@@ -79,9 +79,15 @@ shinyUI(
                         uiOutput('upload_cohort_ui')
                     ),
                     div(style = "margin-top:-30px; margin-bottom: -5px; ",
-                        selectizeInput("person", label = "Person", width = "100%", 
-                                       choices = NULL, 
-                                       options = list(multiple = FALSE, placeholder = 'Select ID', closeAfterSelect = TRUE))
+                        selectizeInput("person", label = "Person", width = "100%",
+                                       choices = NULL,
+                                       options = list(multiple = FALSE,
+                                                      placeholder = 'Select ID',
+                                                      closeAfterSelect = TRUE,
+                                                      maxOptions = 100000L
+                                       )
+                        )
+                        # uiOutput("select_person_ui")
                     ),
                     div(style = "margin-top: +15px; margin-bottom: -25px; display: flex; ",
                         checkboxInput("hide_visited", label = "Hide visited", value = FALSE)
@@ -104,6 +110,15 @@ shinyUI(
                     div(style = "margin-top:-20px; margin-bottom: -0px; ",
                         textInput("entry_regexp", "Entry highlight filter (regex)", value = "")
                     ),
+                    div(style = "margin-top: -20px; margin-left:20px; margin-right:20px;",
+                        sliderInput("category_range",
+                                    "Category range", 
+                                    min = CATEGORY_MIN,
+                                    max = CATEGORY_MAX,
+                                    value = c(CATEGORY_MIN, CATEGORY_MAX)
+                        )
+                    ),
+                    
                     div(style = "margin-top:-5px; margin-bottom: -0px; display: flex; ",
                         div(actionButton("filter_data", "Filter")),
                         div(actionButton("reset_filter", "Reset"))

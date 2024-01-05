@@ -53,18 +53,20 @@ switch(HOST,
          projectid <- "atlas-development-270609"
          bq_auth(path = "bq_auth/atlas-development-270609-0c4bdf74dad0.json")
          VERSION <- system2("gitversion", args = c("/showVariable", "SemVer"), stdout = TRUE)
+         # directory for saved SVG plots
+         SNAPSHOT_DIR <- "~/LifeTrack_plots/"
          # data tables
          longitudinal_data_table <-
-           "atlas-development-270609.sandbox_tools_r11.finngen_r11_service_sector_detailed_longitudinal_v1"
+           "atlas-development-270609.sandbox_tools_r12.finngen_r12_service_sector_detailed_longitudinal_v1"
          minimum_data_table <-
-           "atlas-development-270609.sandbox_tools_r11.finngenid_info_r11_v1"
+           "atlas-development-270609.sandbox_tools_r12.minimum_extended_r12_v1"
          fg_codes_info_table <-
            "atlas-development-270609.medical_codes.fg_codes_info_v5"
          code_prevalence_table <- 
-           "atlas-development-270609.sandbox_tools_r11.code_prevalence_stratified_v3"
+           "atlas-development-270609.sandbox_tools_r12.code_prevalence_stratified_r12_v1"
          # "atlas-development-270609.sandbox_tools_r11.code_prevalence_stratified_r11_v1"
          birth_table <- 
-           "atlas-development-270609.sandbox_tools_r11.birth_mother_r11_v1"
+           "atlas-development-270609.sandbox_tools_r12.birth_mother_r12_v1"
        },
        'MAC_DOCKER' = {
          projectid <- "atlas-development-270609"
@@ -73,17 +75,19 @@ switch(HOST,
          # deactivate https
          httr::set_config(httr::config(ssl_verifypeer=FALSE))
          VERSION <- Sys.getenv("VERSION")
+         # directory for saved SVG plots
+         SNAPSHOT_DIR <- "~/LifeTrack_plots/"
          # data tables
          longitudinal_data_table <-
-           "atlas-development-270609.sandbox_tools_r11.finngen_r11_service_sector_detailed_longitudinal_v1"
+           "atlas-development-270609.sandbox_tools_r12.finngen_r12_service_sector_detailed_longitudinal_v1"
          minimum_data_table <-
-           "atlas-development-270609.sandbox_tools_r11.finngenid_info_r11_v1"
+           "atlas-development-270609.sandbox_tools_r12.minimum_extended_r12_v1"
          fg_codes_info_table <-
            "atlas-development-270609.medical_codes.fg_codes_info_v5"
          code_prevalence_table <- 
-           "atlas-development-270609.sandbox_tools_r11.code_prevalence_stratified_v3"
+           "atlas-development-270609.sandbox_tools_r12.code_prevalence_stratified_r12_v1"
          birth_table <- 
-           "atlas-development-270609.sandbox_tools_r11.birth_mother_r11_v1"
+           "atlas-development-270609.sandbox_tools_r12.birth_mother_r12_v1"
        },
        'SANDBOX' = {
          # RStudio sanitizes BUCKET_SANDBOX_IVM away, must be hard-coded
@@ -109,6 +113,7 @@ switch(HOST,
          options(gargle_oauth_cache=FALSE) #to avoid the question that freezes the app
          bigrquery::bq_auth(scopes = "https://www.googleapis.com/auth/bigquery")
          httr::set_config(httr::config(ssl_verifypeer=FALSE))
+         SNAPSHOT_DIR <- "~/LifeTrack_plots/"
          # data tables
          longitudinal_data_table <-
            "finngen-production-library.sandbox_tools_r12.finngen_r12_service_sector_detailed_longitudinal_v1"
@@ -129,12 +134,20 @@ switch(HOST,
 
 log_entry("VERSION", VERSION)
 
+# check if SNAPSHOT_DIR exits
+if(!dir.exists(SNAPSHOT_DIR)){
+  log_entry("creating the SNAPSHOT_DIR")
+  dir.create(SNAPSHOT_DIR, mode = "0777")
+} else {
+  log_entry("the SNAPSHOT_DIR exits")
+}
+
 # register time spans and color
 df_register_spans <- tribble(
   ~SOURCE, ~START_DATE, ~COLOR, 
   "PURCH", ymd("1995-01-01"), "#6fcb6c",
   "REIMB", ymd("1964-01-01"), "#ab172b",
-  "PRIM_OUT", ymd("2011-01-01"), "#c200c6", # "#fdc3ac",
+  "PRIM_OUT", ymd("2011-01-01"), "#c200c6", 
   "INPAT", ymd("1969-01-01"), "#ff4e31",
   "OUTPAT", ymd("1998-01-01"),  "#ad86b7",
   "CANC", ymd("1953-01-01"), "#c1c8c8",
@@ -162,8 +175,19 @@ showModalProgress <- function(..., title = NULL, footer = modalButton("OK")){
 #
 # build_plot_values ####
 #
-# - assigns the data into categories and classes
-#
+#' - assigns the data into categories and classes
+#' - transforms df_all -> df_points
+#'
+#'  in: 
+#'    df_all (raw data)
+#'    values (reactive structure)
+#'  
+#'  out: 
+#'    values$df_height
+#!    values$df_labels
+#!    values$df_register_start
+#!    values$df_points
+
 
 build_plot_values <- function(df_all, values){
   df_all <- df_all |> 
@@ -178,6 +202,16 @@ build_plot_values <- function(df_all, values){
       str_detect(vocabulary_id, "FHL") ~ "FHL",
       str_starts(vocabulary_id, "SPAT") ~ "SPAT",
       str_starts(vocabulary_id, "ICPC") ~ "ICPC",
+      str_starts(vocabulary_id, "NCSP") & 
+        str_detect(FG_CODE1, "^SA(A|B|C|D|E)|^SB(A|B)|^SC(A|E|G)") ~ "NCSP_teeth_1_preventive",
+      str_starts(vocabulary_id, "NCSP") & 
+        str_detect(FG_CODE1, "^SD(A|C|D|E)|^SF(A|B|C|D|E)|^EB(1|2|_)") ~ "NCSP_teeth_2_basic",
+      str_starts(vocabulary_id, "NCSP") & 
+        str_detect(FG_CODE1, "^SG(A|B|C|D)|^EB(A|B|U|W)") ~ "NCSP_teeth_3_major",
+      str_starts(vocabulary_id, "NCSP") & 
+        str_detect(FG_CODE1, "^SJ(B|C|D|E|F|X)|^SP(A|B|C|D|E|F|G)") ~ "NCSP_teeth_4_prosthetics",
+      str_starts(vocabulary_id, "NCSP") & 
+        str_detect(FG_CODE1, "^SH(A|B|C)|^SXC|^OIK") ~ "NCSP_teeth_5_other",
       str_starts(vocabulary_id, "NCSP") ~ "NCSP",
       str_starts(vocabulary_id, "HPN") ~ "HPN",
       str_starts(vocabulary_id, "HPO") ~ "HPO",
@@ -194,11 +228,17 @@ build_plot_values <- function(df_all, values){
       str_detect(vocabulary_id, "FHL") ~ 8,
       str_starts(vocabulary_id, "ICPC") ~ 9,
       str_starts(vocabulary_id, "HPN") ~ 10,
+      vocabulary_id == "NCSP_teeth_5_other" ~ 12,
+      vocabulary_id == "NCSP_teeth_4_prosthetics" ~ 13,
+      vocabulary_id == "NCSP_teeth_3_major" ~ 14,
+      vocabulary_id == "NCSP_teeth_2_basic" ~ 15,
+      vocabulary_id == "NCSP_teeth_1_preventive" ~ 16,
       str_starts(vocabulary_id, "NCSP") ~ 11,
-      str_starts(vocabulary_id, "HPO") ~ 12,
-      str_starts(vocabulary_id, "SPAT") ~ 13,
+      str_starts(vocabulary_id, "HPO") ~ 17,
+      str_starts(vocabulary_id, "SPAT") ~ 18,
       TRUE ~ 0 # "Unclassified"
     ))
+  
   
   df_all <- df_all |>
     mutate(CLASSIFICATION = case_when(
@@ -246,6 +286,11 @@ build_plot_values <- function(df_all, values){
       str_length(chapter) == 4 & chapter == "SPAT" ~ "Procedure (SPAT)",
       str_length(chapter) == 4 & chapter == "ICPC" ~ "Reason for visit (ICPC)",
       str_length(chapter) == 4 & chapter == "NCSP" ~ "Nordic Classification of Surgical Procedures (NCSP)",
+      chapter == "NCSP_teeth_1_preventive" ~ "Dental Procedure: preventive (NCSP)",
+      chapter == "NCSP_teeth_2_basic" ~ "Dental Procedure: basic (NCSP)",
+      chapter == "NCSP_teeth_3_major" ~ "Dental Procedure: major (NCSP)",
+      chapter == "NCSP_teeth_4_prosthetics" ~ "Dental Procedure: orthodontics and prosthetics (NCSP)",
+      chapter == "NCSP_teeth_5_other" ~ "Dental Procedure: other (NCSP)",
       chapter == "ICD8or9" ~ "ICD8 or ICD9",
       SOURCE == "BIRTH" ~ "Birth Registry",
       SOURCE == "CANC" ~ "Cancer Registry",
@@ -260,9 +305,9 @@ build_plot_values <- function(df_all, values){
     mutate(SOURCE = factor(SOURCE)) |> 
     arrange(ORDER, desc(chapter), CLASSIFICATION) |> 
     arrange(desc(CLASSIFICATION == "Unclassified")) |> 
-    mutate(y_order = row_number()) |> 
-    mutate(CLASSIFICATION = fct_reorder(CLASSIFICATION, y_order)) |> 
-    mutate(X_label = fct_reorder(str_wrap(CLASSIFICATION, 30), y_order)) |> 
+    mutate(y_order = row_number()) |>
+    mutate(CLASSIFICATION = fct_reorder(CLASSIFICATION, y_order)) |>
+    mutate(X_label = fct_reorder(str_wrap(CLASSIFICATION, 30), y_order)) |>
     mutate(data_id = case_when(
       is.na(INDEX) | INDEX == '' ~ paste0(row_number(), '_BIRTH'),
       TRUE ~ INDEX
@@ -331,9 +376,9 @@ build_plot_values <- function(df_all, values){
 
 server <- function(input, output, session){
   
-  visited_persons <- NULL
-  cohort <- NULL
-  cohort_saved <- NULL
+  visited_persons <- ""
+  cohort <- ""
+  cohort_saved <- ""
   person <- ""
 
   # reactive data
@@ -345,7 +390,8 @@ server <- function(input, output, session){
     df_register_start = NULL,
     df_minimum = NULL,
     df_selected = NULL,
-    date_range = NULL
+    date_range = NULL, 
+    category_range = NULL
   )
   
   reset_values <- function(){
@@ -358,6 +404,7 @@ server <- function(input, output, session){
     values$df_points <- NULL
     values$df_selected <- NULL
     values$date_range <- NULL
+    values$category_range <- NULL
   }
   
   get_all_data <- function(finngenid){
@@ -381,7 +428,7 @@ server <- function(input, output, session){
       "MOTHER_FINNGENID AS FINNGENID, ",
       "'BIRTH', ",
       "MOTHER_AGE AS EVENT_AGE, ",
-      "APPROX_DELIVERY_DATE AS APPROX_EVENT_DAY, ",
+      "APPROX_DELIVERY_DATE AS APPROX_EVENT_DAY, ", # APPROX_BIRTH_DATE / APPROX_DELIVERY_DATE
       "SDIAG1 AS CODE1, ",
       "NULL, ",
       "NULL, ",
@@ -432,6 +479,17 @@ server <- function(input, output, session){
               )
     )
   })
+  
+  # output$select_person_ui <- renderUI({
+  #   selectizeInput("person", label = "Person", width = "100%", 
+  #                  choices = NULL, 
+  #                  options = list(multiple = FALSE, 
+  #                                 placeholder = 'Select ID', 
+  #                                 closeAfterSelect = TRUE,
+  #                                 maxOptions = 100000L
+  #                  )
+  #   )
+  # })
   
   observeEvent(input$upload_cohort, {
     log_entry("reading cohort:", input$upload_cohort$name)
@@ -498,7 +556,9 @@ server <- function(input, output, session){
     visited_persons <<- c(visited_persons, person)
     if(input$hide_visited){
       cohort <<- setdiff(cohort, visited_persons)
-      updateSelectizeInput(session, "person", choices = cohort, selected = character(0), server = TRUE)
+      # message(toString(cohort))
+      # update should be done server-side, "server = TRUE", but in the current version it does not work
+      updateSelectizeInput(session, "person", choices = cohort, selected = character(0), server = FALSE)
     } else {
       updateSelectizeInput(session, "person", selected = character(0))
     }
@@ -618,6 +678,8 @@ server <- function(input, output, session){
                       value = c(df_timespan$DATE_MIN, df_timespan$DATE_MAX)
     )
     values$date_range <- c(df_timespan$DATE_MIN, df_timespan$DATE_MAX)
+    
+    values$category_range <- c(CATEGORY_MIN, CATEGORY_MAX)
  
     # clean up the translations
     df_all <- df_all |> 
@@ -683,6 +745,9 @@ server <- function(input, output, session){
     build_plot_values(df_all, values)
     values$df_all <- df_all
     
+    # View(df_all)
+    # browser()
+    
     # apply filters to fetched data
     
     class_regexp <- str_trim(input$class_regexp)
@@ -725,15 +790,29 @@ server <- function(input, output, session){
   
   observeEvent(input$filter_data, {
     log_entry("filter changed")
-
+    
     if(is.null(values$df_all)) return()
     
     shinyjs::runjs("window.scrollTo(0, 0)")
     
-    # filter according to date range
+    # filter according to date range and the number in category
     df_all <- values$df_all |> 
-      filter(APPROX_EVENT_DAY >= input$date_range[1] & APPROX_EVENT_DAY <= input$date_range[2])
-    if(nrow(df_all) != nrow(values$df_all))
+      filter(APPROX_EVENT_DAY >= input$date_range[1] & APPROX_EVENT_DAY <= input$date_range[2]) |> 
+      # get rid of the BIRTH data, "PARITY/NRO = 1/2"
+      mutate(CAT = str_replace(CATEGORY, "PARITY.*", "")) |> 
+      mutate(CAT = str_replace(CAT, "[A-Z]*", "")) |> 
+      filter(
+        is.na(CAT) | CAT == "" | (
+          !is.na(CAT)
+          & as.numeric(CAT) >= as.numeric(input$category_range[1])
+          & as.numeric(CAT) <= as.numeric(input$category_range[2])
+        )
+      )
+    
+    # View(select(df_all, CATEGORY, CAT))
+    # browser()
+    
+    if(nrow(df_all) != nrow(values$df_points))
       build_plot_values(df_all, values)
     
     class_regexp <- str_trim(input$class_regexp)
@@ -785,7 +864,8 @@ server <- function(input, output, session){
     updateTextInput(session, "entry_regexp", value = "")
     updateTextInput(session, "class_regexp", value = "")
     updateSliderInput(session, "date_range", value = values$date_range)
-
+    updateSliderInput(session, "category_range", value = values$category_range)
+    
     if(is.null(values$df_all)) return()
     
     build_plot_values(values$df_all, values)
@@ -1023,6 +1103,20 @@ server <- function(input, output, session){
              )
            )
     )
+    
+    #
+    # save the SVG plot into ~/LifeTrack_plots/
+    #
+    plot_time <- Sys.time()
+    filename <- paste0(SNAPSHOT_DIR, person, ".html")
+    if(file.exists(filename)){
+      log_entry("removing", filename)
+      file.remove(filename)
+    }
+    log_entry("saving", filename)
+    htmltools::save_html(gg_girafe, filename)
+    print(Sys.time() - plot_time)
+
     log_entry("return SVG object")
     return(gg_girafe)
   })
@@ -1030,8 +1124,8 @@ server <- function(input, output, session){
   # handle window close ####
   onStop(function() {
     log_entry("window close")
-    # remove global vars
-    # rm(df_prevalence, df_register_spans, envir = .GlobalEnv)
+    # remove global vars/constants
+    rm(CATEGORY_MIN, CATEGORY_MAX, envir = .GlobalEnv)
     stopApp()
   }, session)
   
