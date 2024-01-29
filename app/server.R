@@ -1107,16 +1107,16 @@ server <- function(input, output, session){
     #
     # save the SVG plot into ~/LifeTrack_plots/
     #
-    plot_time <- Sys.time()
-    filename <- paste0(SNAPSHOT_DIR, person, ".html")
-    if(file.exists(filename)){
-      log_entry("removing", filename)
-      file.remove(filename)
+    if(dir.exists(SNAPSHOT_DIR)){
+      filename <- paste0(SNAPSHOT_DIR, person, ".html")
+      if(file.exists(filename)){
+        log_entry("removing", filename)
+        file.remove(filename)
+      }
+      log_entry("saving", filename)
+      htmltools::save_html(gg_girafe, filename)
     }
-    log_entry("saving", filename)
-    htmltools::save_html(gg_girafe, filename)
-    print(Sys.time() - plot_time)
-
+    
     log_entry("return SVG object")
     return(gg_girafe)
   })
