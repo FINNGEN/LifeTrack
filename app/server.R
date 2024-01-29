@@ -409,11 +409,6 @@ server <- function(input, output, session){
   
   get_all_data <- function(finngenid){
     log_entry("reading person:", finngenid)
-    # sql <- paste0(
-    #   "SELECT * ",
-    #   "FROM ", longitudinal_data_table, " ",
-    #   "WHERE FINNGENID = '", finngenid, "'"
-    # )
     sql <- paste0(
       "SELECT * ",
       "FROM ", longitudinal_data_table, " ",
@@ -480,17 +475,6 @@ server <- function(input, output, session){
     )
   })
   
-  # output$select_person_ui <- renderUI({
-  #   selectizeInput("person", label = "Person", width = "100%", 
-  #                  choices = NULL, 
-  #                  options = list(multiple = FALSE, 
-  #                                 placeholder = 'Select ID', 
-  #                                 closeAfterSelect = TRUE,
-  #                                 maxOptions = 100000L
-  #                  )
-  #   )
-  # })
-  
   observeEvent(input$upload_cohort, {
     log_entry("reading cohort:", input$upload_cohort$name)
     visited_persons <<- NULL
@@ -556,7 +540,6 @@ server <- function(input, output, session){
     visited_persons <<- c(visited_persons, person)
     if(input$hide_visited){
       cohort <<- setdiff(cohort, visited_persons)
-      # message(toString(cohort))
       # update should be done server-side, "server = TRUE", but in the current version it does not work
       updateSelectizeInput(session, "person", choices = cohort, selected = character(0), server = FALSE)
     } else {
@@ -745,11 +728,21 @@ server <- function(input, output, session){
     build_plot_values(df_all, values)
     values$df_all <- df_all
     
-    # View(df_all)
-    # browser()
+    # set CAT filter limits from the data
+    df_all <- df_all |> 
+      mutate(CAT_NUM = str_extract(CATEGORY, "[0-9]+")) |> 
+      mutate(CAT_MIN = min(CAT_NUM, na.rm = TRUE)) |> 
+      mutate(CAT_MAX = max(CAT_NUM, na.rm = TRUE))
+    
+    CAT_MIN = first(df_all$CAT_MIN)
+    CAT_MAX <- first(df_all$CAT_MAX)
+    updateSliderInput(session, "category_range", 
+                      min = CAT_MIN, 
+                      max = CAT_MAX, 
+                      value = c(CAT_MIN, CAT_MAX)
+    )
     
     # apply filters to fetched data
-    
     class_regexp <- str_trim(input$class_regexp)
     if(class_regexp != ""){
       log_entry("got regexp on class")
@@ -804,8 +797,8 @@ server <- function(input, output, session){
       filter(
         is.na(CAT) | CAT == "" | (
           !is.na(CAT)
-          & as.numeric(CAT) >= as.numeric(input$category_range[1])
-          & as.numeric(CAT) <= as.numeric(input$category_range[2])
+          & as.numeric(str_extract(CAT, "[0-9]+")) >= as.numeric(input$category_range[1])
+          & as.numeric(str_extract(CAT, "[0-9]+")) <= as.numeric(input$category_range[2])
         )
       )
     
