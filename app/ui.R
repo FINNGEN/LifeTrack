@@ -87,7 +87,6 @@ shinyUI(
                                                       maxOptions = 100000L
                                        )
                         )
-                        # uiOutput("select_person_ui")
                     ),
                     div(style = "margin-top: +15px; margin-bottom: -25px; display: flex; ",
                         checkboxInput("hide_visited", label = "Hide visited", value = FALSE)
@@ -111,11 +110,13 @@ shinyUI(
                         textInput("entry_regexp", "Entry highlight filter (regex)", value = "")
                     ),
                     div(style = "margin-top: -20px; margin-left:20px; margin-right:20px;",
+                        tags$style(type = "text/css", ".irs-grid-pol.small {height: 0px;}"),
                         sliderInput("category_range",
-                                    "Category range", 
-                                    min = CATEGORY_MIN,
-                                    max = CATEGORY_MAX,
-                                    value = c(CATEGORY_MIN, CATEGORY_MAX)
+                                    "Entry CAT range", 
+                                    min = 0,
+                                    max = 20,
+                                    value = c(0, 20),
+                                    ticks = FALSE
                         )
                     ),
                     
@@ -126,22 +127,6 @@ shinyUI(
                     
                     hr(),
                     
-                    # div(style = "margin-top: -20px; margin-left:20px; margin-right:20px;",
-                    #     sliderInput("prevalence",
-                    #                 "Prevalence", 
-                    #                 min = 0.0,
-                    #                 max = 100.0,
-                    #                 value = c(0.0, 100.0),
-                    #                 step = 0.1,
-                    #                 post = "%",
-                    #                 round = -1
-                    #     ),
-                    #     div(style = "margin-top:-5px; margin-bottom: -0px; display: flex; ",
-                    #         div(actionButton("show_prevalence", "Show")),
-                    #         div(actionButton("reset_prevalence", "Reset")),
-                    #     )
-                    # ),
-
                     div(style = "margin-top: +15px; margin-bottom: -25px; display: flex; ",
                         checkboxInput("prevalence", label = "Prevalence", value = FALSE)
                     ),

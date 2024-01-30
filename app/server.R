@@ -91,19 +91,19 @@ switch(HOST,
        },
        'SANDBOX' = {
          # RStudio sanitizes BUCKET_SANDBOX_IVM away, must be hard-coded
-         projectid <- "fg-production-sandbox-4" 
+         projectid <- "fg-production-sandbox-6" # FIMM sandbox 
          VERSION <- Sys.getenv("VERSION")  
          # data tables
          longitudinal_data_table <-
-           "finngen-production-library.sandbox_tools_r11.finngen_r11_service_sector_detailed_longitudinal_v1"
+           "finngen-production-library.sandbox_tools_r12.finngen_r12_service_sector_detailed_longitudinal_v1"
          minimum_data_table <-
-           "finngen-production-library.sandbox_tools_r11.finngenid_info_r11_v1"
+           "finngen-production-library.sandbox_tools_r12.minimum_extended_r12_v1"
          fg_codes_info_table <-
            "finngen-production-library.medical_codes.fg_codes_info_v5"
          code_prevalence_table <- 
-           "finngen-production-library.sandbox_tools_r11.code_prevalence_stratified_r11_v1"
+           "finngen-production-library.sandbox_tools_r12.code_prevalence_stratified_r12_v1"
          birth_table <- 
-           "finngen-production-library.sandbox_tools_r11.birth_mother_r11_v1"
+           "finngen-production-library.sandbox_tools_r12.birth_mother_r12_v1"
          options(gargle_oauth_cache = FALSE)
          bq_auth(scopes = "https://www.googleapis.com/auth/bigquery")
        },
@@ -374,7 +374,12 @@ build_plot_values <- function(df_all, values){
 
 # event handling ####
 
+session_count <- 0
+
 server <- function(input, output, session){
+  
+  session_count <<- session_count + 1
+  log_entry("Session count", session_count)
   
   visited_persons <- ""
   cohort <- ""
@@ -409,11 +414,6 @@ server <- function(input, output, session){
   
   get_all_data <- function(finngenid){
     log_entry("reading person:", finngenid)
-    # sql <- paste0(
-    #   "SELECT * ",
-    #   "FROM ", longitudinal_data_table, " ",
-    #   "WHERE FINNGENID = '", finngenid, "'"
-    # )
     sql <- paste0(
       "SELECT * ",
       "FROM ", longitudinal_data_table, " ",
@@ -480,17 +480,6 @@ server <- function(input, output, session){
     )
   })
   
-  # output$select_person_ui <- renderUI({
-  #   selectizeInput("person", label = "Person", width = "100%", 
-  #                  choices = NULL, 
-  #                  options = list(multiple = FALSE, 
-  #                                 placeholder = 'Select ID', 
-  #                                 closeAfterSelect = TRUE,
-  #                                 maxOptions = 100000L
-  #                  )
-  #   )
-  # })
-  
   observeEvent(input$upload_cohort, {
     log_entry("reading cohort:", input$upload_cohort$name)
     visited_persons <<- NULL
@@ -556,7 +545,6 @@ server <- function(input, output, session){
     visited_persons <<- c(visited_persons, person)
     if(input$hide_visited){
       cohort <<- setdiff(cohort, visited_persons)
-      # message(toString(cohort))
       # update should be done server-side, "server = TRUE", but in the current version it does not work
       updateSelectizeInput(session, "person", choices = cohort, selected = character(0), server = FALSE)
     } else {
@@ -679,8 +667,6 @@ server <- function(input, output, session){
     )
     values$date_range <- c(df_timespan$DATE_MIN, df_timespan$DATE_MAX)
     
-    values$category_range <- c(CATEGORY_MIN, CATEGORY_MAX)
- 
     # clean up the translations
     df_all <- df_all |> 
       mutate(name_en = str_to_sentence(name_en_code5)) |> 
@@ -745,11 +731,21 @@ server <- function(input, output, session){
     build_plot_values(df_all, values)
     values$df_all <- df_all
     
-    # View(df_all)
-    # browser()
+    # set CAT filter limits from the data
+    df_all <- df_all |> 
+      mutate(CAT_NUM = str_extract(CATEGORY, "[0-9]+")) |> 
+      mutate(CAT_MIN = min(CAT_NUM, na.rm = TRUE)) |> 
+      mutate(CAT_MAX = max(CAT_NUM, na.rm = TRUE))
+    
+    CAT_MIN = first(df_all$CAT_MIN)
+    CAT_MAX <- first(df_all$CAT_MAX)
+    updateSliderInput(session, "category_range", 
+                      min = CAT_MIN, 
+                      max = CAT_MAX, 
+                      value = c(CAT_MIN, CAT_MAX)
+    )
     
     # apply filters to fetched data
-    
     class_regexp <- str_trim(input$class_regexp)
     if(class_regexp != ""){
       log_entry("got regexp on class")
@@ -804,8 +800,8 @@ server <- function(input, output, session){
       filter(
         is.na(CAT) | CAT == "" | (
           !is.na(CAT)
-          & as.numeric(CAT) >= as.numeric(input$category_range[1])
-          & as.numeric(CAT) <= as.numeric(input$category_range[2])
+          & as.numeric(str_extract(CAT, "[0-9]+")) >= as.numeric(input$category_range[1])
+          & as.numeric(str_extract(CAT, "[0-9]+")) <= as.numeric(input$category_range[2])
         )
       )
     
@@ -1107,16 +1103,16 @@ server <- function(input, output, session){
     #
     # save the SVG plot into ~/LifeTrack_plots/
     #
-    plot_time <- Sys.time()
-    filename <- paste0(SNAPSHOT_DIR, person, ".html")
-    if(file.exists(filename)){
-      log_entry("removing", filename)
-      file.remove(filename)
+    if(dir.exists(SNAPSHOT_DIR)){
+      filename <- paste0(SNAPSHOT_DIR, person, ".html")
+      if(file.exists(filename)){
+        log_entry("removing", filename)
+        file.remove(filename)
+      }
+      log_entry("saving", filename)
+      htmltools::save_html(gg_girafe, filename)
     }
-    log_entry("saving", filename)
-    htmltools::save_html(gg_girafe, filename)
-    print(Sys.time() - plot_time)
-
+    
     log_entry("return SVG object")
     return(gg_girafe)
   })
@@ -1124,9 +1120,13 @@ server <- function(input, output, session){
   # handle window close ####
   onStop(function() {
     log_entry("window close")
-    # remove global vars/constants
-    rm(CATEGORY_MIN, CATEGORY_MAX, envir = .GlobalEnv)
-    stopApp()
+    session_count <<- session_count - 1
+    log_entry("Session count", session_count)
+    # exit container if this is the last instance
+    if(session_count == 0) {
+      log_entry("LifeTrack exits")
+      stopApp()
+    }
   }, session)
   
 }
