@@ -91,19 +91,19 @@ switch(HOST,
        },
        'SANDBOX' = {
          # RStudio sanitizes BUCKET_SANDBOX_IVM away, must be hard-coded
-         projectid <- "fg-production-sandbox-4" 
+         projectid <- "fg-production-sandbox-6" # FIMM sandbox 
          VERSION <- Sys.getenv("VERSION")  
          # data tables
          longitudinal_data_table <-
-           "finngen-production-library.sandbox_tools_r11.finngen_r11_service_sector_detailed_longitudinal_v1"
+           "finngen-production-library.sandbox_tools_r12.finngen_r12_service_sector_detailed_longitudinal_v1"
          minimum_data_table <-
-           "finngen-production-library.sandbox_tools_r11.finngenid_info_r11_v1"
+           "finngen-production-library.sandbox_tools_r12.minimum_extended_r12_v1"
          fg_codes_info_table <-
            "finngen-production-library.medical_codes.fg_codes_info_v5"
          code_prevalence_table <- 
-           "finngen-production-library.sandbox_tools_r11.code_prevalence_stratified_r11_v1"
+           "finngen-production-library.sandbox_tools_r12.code_prevalence_stratified_r12_v1"
          birth_table <- 
-           "finngen-production-library.sandbox_tools_r11.birth_mother_r11_v1"
+           "finngen-production-library.sandbox_tools_r12.birth_mother_r12_v1"
          options(gargle_oauth_cache = FALSE)
          bq_auth(scopes = "https://www.googleapis.com/auth/bigquery")
        },
@@ -662,8 +662,6 @@ server <- function(input, output, session){
     )
     values$date_range <- c(df_timespan$DATE_MIN, df_timespan$DATE_MAX)
     
-    values$category_range <- c(CATEGORY_MIN, CATEGORY_MAX)
- 
     # clean up the translations
     df_all <- df_all |> 
       mutate(name_en = str_to_sentence(name_en_code5)) |> 
@@ -1117,9 +1115,8 @@ server <- function(input, output, session){
   # handle window close ####
   onStop(function() {
     log_entry("window close")
-    # remove global vars/constants
-    rm(CATEGORY_MIN, CATEGORY_MAX, envir = .GlobalEnv)
-    stopApp()
+    # removed stopApp to allow several instances open
+    # stopApp()
   }, session)
   
 }
