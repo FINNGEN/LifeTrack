@@ -374,7 +374,12 @@ build_plot_values <- function(df_all, values){
 
 # event handling ####
 
+session_count <- 0
+
 server <- function(input, output, session){
+  
+  session_count <<- session_count + 1
+  log_entry("Session count", session_count)
   
   visited_persons <- ""
   cohort <- ""
@@ -1115,8 +1120,13 @@ server <- function(input, output, session){
   # handle window close ####
   onStop(function() {
     log_entry("window close")
-    # removed stopApp to allow several instances open
-    # stopApp()
+    session_count <<- session_count - 1
+    log_entry("Session count", session_count)
+    # exit container if this is the last instance
+    if(session_count == 0) {
+      log_entry("LifeTrack exits")
+      stopApp()
+    }
   }, session)
   
 }
