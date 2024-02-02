@@ -410,6 +410,8 @@ server <- function(input, output, session){
     values$df_selected <- NULL
     values$date_range <- NULL
     values$category_range <- NULL
+    if(length(values$category_range) == 2)
+      updateSliderInput(session, "category_range", value = c(values$category_range[1], values$category_range[2]))
   }
   
   get_all_data <- function(finngenid){
@@ -744,6 +746,7 @@ server <- function(input, output, session){
                       max = CAT_MAX, 
                       value = c(CAT_MIN, CAT_MAX)
     )
+    values$category_range <- c(CAT_MIN, CAT_MAX)
     
     # apply filters to fetched data
     class_regexp <- str_trim(input$class_regexp)
